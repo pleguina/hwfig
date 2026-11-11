@@ -6,4 +6,4 @@
 *.fls
 examples/*.pdf
 tests/*.pdf
-claude-skill/*.zip
+skill/*.zip

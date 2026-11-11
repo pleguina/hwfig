@@ -1,24 +1,40 @@
 % Versal-style SoC: host, PS, NoC, PL kernels and an AIE array.
+% Routing rules used here: wires between regions run in an empty channel
+% (x = 6.7) and under the AIE frame on their own levels (y = -1.7, -2.3);
+% every label sits on a segment that lies entirely in free space.
 \documentclass[tikz,border=6pt]{standalone}
 \usepackage[okabe]{hwfig}
 \begin{document}
 \begin{tikzpicture}[hw]
-  \node[host] (host) at (-3.2,0.3) {Host\\(x86)};
+  \node[host] (host) at (-3.4,0.3) {Host\\(x86)};
   \node[cpu] (ps) at (0,2.2) {PS\\Cortex-A72};
-  \node[extmem] (ddr) at (0,-1.9) {DDR4};
-  \node[xbar,minimum height=5.4cm] (noc) at (2,0.15) {\rotatebox{90}{NoC}};
-  \node[hlsbox] (k1) at (4.2,1.6) {mm2s\\(HLS)};
-  \node[hlsbox] (k2) at (4.2,-1.9) {s2mm\\(HLS)};
-  \node[bram] (buf) at (4.2,0.3) {BRAM buf};
-  \pic (arr) at (7.0,-0.45) {aiearray};
+  \node[extmem] (ddr) at (0,-2.0) {DDR4};
+  \node[xbar,minimum height=5.6cm] (noc) at (2,0.1) {\rotatebox{90}{NoC}};
+  \node[hlsbox] (k1) at (4.7,1.6) {mm2s\\(HLS)};
+  \node[hlsbox] (k2) at (4.7,-2.3) {s2mm\\(HLS)};
+  \node[bram] (buf) at (4.7,-0.35) {BRAM buf};
+  \pic (arr) at (8.3,0.1) {aiearray};
+
+  % routing levels
+  \def\chan{6.7}    % vertical channel between PL and AIE regions
+  \def\lvla{-1.7}   % mm2s -> AIE, under the AIE frame
+  \def\lvlb{-2.3}   % AIE -> s2mm, one level lower (= s2mm row)
+
   \draw[bus] (host) -- (host-|noc.west) node[lbl,midway,above=2pt]{PCIe Gen4};
   \draw[arr] (ps.east) -- (ps-|noc.west);
   \draw[arr,<->] (ddr.east) -- (ddr-|noc.west);
-  \draw[bus] (k1-|noc.east)--(k1) pic[pos=.35]{buswidth=128};
-  \draw[bus] (k2)--(k2-|noc.east);
-  \draw[arr] (k1.east) -- ++(0.9,0) node[lbl,pos=0.45,above]{AXI4-S} |- ($(arr-s1.south)+(0,-0.35)$) -- (arr-s1.south);
-  \draw[arr] (arr-s4.south) |- (k2.east);
-  \draw[darr] (buf)--(k1); \draw[darr] (buf)--(k2);
+  \draw[bus] (k1-|noc.east) -- (k1) pic[pos=.4]{buswidth=128};
+  \draw[bus] (k2) -- (k2-|noc.east);
+  % mm2s -> shim 1: right into the channel, down, along level a, up into the shim
+  \draw[arr] (k1.east) -- (\chan,1.6)
+       -- node[lbl,rotate=90,below]{AXI4-S} (\chan,\lvla)
+       -- (arr-s1.south|-{(0,\lvla)}) -- (arr-s1.south);
+  % shim 4 -> s2mm: down to level b, left to s2mm
+  \draw[arr] (arr-s4.south) -- (arr-s4.south|-{(0,\lvlb)})
+       -- node[lbl,above,pos=0.2]{AXI4-S} (k2.east);
+  \draw[darr] (buf) -- (k1);
+  \draw[darr] (buf) -- (k2);
+
   \begin{scope}[on background layer]
     \node[psregion,fit=(ps),label={[grouplabel]above:PS}] {};
     \node[plregion,fit=(k1)(k2)(buf),inner sep=8pt,label={[grouplabel]above:PL @ 300 MHz}] {};

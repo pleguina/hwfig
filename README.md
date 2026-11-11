@@ -134,6 +134,13 @@ These keep figures across a paper looking like one family:
   `\begin{scope}[on background layer]\node[group,fit=(a)(b),label={[grouplabel]above:PL}]{};\end{scope}`
 - Place nodes with explicit coordinates; for dense dataflow it beats
   `positioning`. Keep figures ≤ 16 cm wide for two-column papers.
+- Leave ≥ 0.6 cm between adjacent frames; nothing sits *on* a frame edge.
+- Route wires between regions through an empty channel, each on its own
+  level, ≥ 0.3 cm from parallel frame edges and block sides
+  (see `examples/versal_soc.tex`).
+- Put wire labels only on segments in free space — never where a wire
+  crosses a frame border. On vertical runs rotate them:
+  `node[lbl,rotate=90,below]{AXI4-S}`.
 
 ![Two requantisation branches](gallery/requant_branches-1.png)
 
@@ -146,12 +153,12 @@ and MiKTeX without installing the package).
 
 ## Claude skill
 
-`claude-skill/SKILL.md` is a [Claude](https://claude.ai) skill that teaches
+`skill/SKILL.md` is a [Claude](https://claude.ai) skill that teaches
 Claude to draw figures with this package: the visual grammar above, the style
 and pic reference, common pitfalls, and a compile → inspect → fix loop.
 
 ```sh
-sh claude-skill/package.sh    # -> claude-skill/tikz-hardware-figures.zip
+sh skill/package.sh    # -> skill/tikz-hardware-figures.zip
 ```
 
 Upload the zip in claude.ai under *Settings → Capabilities → Skills*. The zip

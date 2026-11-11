@@ -34,6 +34,13 @@ Use this skill whenever the user wants a hardware figure in LaTeX/TikZ: dataflow
   `\begin{scope}[on background layer]\node[group,fit=(a)(b),label={[grouplabel]above:PL}] {};\end{scope}`
 - Clock domains: `clkdomain` (accent colour, dashed) or `clkdomain=<color>`; mark crossings with a `cdc` node.
 - Start every picture with `\begin{tikzpicture}[hw]` (sets font `\footnotesize`, line width, arrow tips).
+
+### Routing and labels (check these on every PNG)
+
+- **Gaps between regions.** Leave ≥ 0.6 cm between adjacent frames (Runtime | Message passing, PL | AIE). Nodes, merge `op`s and wires must never sit *on* a frame edge — if a node belongs to neither frame, give it room outside both.
+- **Routing channels.** Wires between regions run in an empty channel between the frames (define it: `\def\chan{6.7}`), then on their own horizontal *level* below/above the target frame (`\def\lvla{-1.7}`). Two wires never share a level; keep ≥ 0.3 cm between a wire and any parallel frame edge or block side, and ≥ 0.4 cm between parallel wires.
+- **Labels sit on free segments only.** Put `lbl`/`buswidth` on a segment that lies entirely in empty space — never where the wire crosses a frame border, and never within ~0.2 cm of a block. If the only free stretch is vertical, rotate the label to read bottom-to-top: `node[lbl,rotate=90,below]{AXI4-S}`. On short links use `pic[pos=.35..0.4]` so the number clears the destination block.
+- **Explicit segments for labelled elbows.** `-|`/`|-` can't take a label on a chosen leg; write the corners out: `(a.east) -- (\chan,ya) -- node[lbl,...]{X} (\chan,\lvla) -- (b.south|-{(0,\lvla)}) -- (b.south);`
 - Math in labels: `$W_{\mathrm{root}}$`; two-line labels with `\\` (all styles set `align=center`).
 
 ## Node styles (all palette-aware)
@@ -113,22 +120,22 @@ Keep fills ≤ 25% tint so black text stays readable, and check the greyscale co
 
 ```latex
 \begin{tikzpicture}[hw]
-  \node[runtime] (xin) at (0,1.4) {$X_i$};
-  \node[runtime] (xein) at (0,-1.4) {$(X,E)$};
+  \node[runtime] (xin) at (-0.9,1.4) {$X_i$};
+  \node[runtime] (xein) at (-0.9,-1.4) {$(X,E)$};
   \node[hlsbox] (root) at (2.5,1.4) {Root\\$W_{\mathrm{root}}x_i$};
   \node[qbox] (qr) at (4.9,1.4) {$Q_r$\\shift + sat8};
   \node[mem] (agg) at (2.5,-1.4) {Mean aggregation\\$m_i$};
   \node[hlsbox] (neigh) at (5.5,-1.4) {Neighbor\\$W_{\mathrm{neigh}}m_i+b$};
   \node[qbox] (qn) at (8.1,-1.4) {$Q_n$\\shift + sat8};
-  \node[op] (sum) at (9.0,0) {$+$};
-  \node[qbox,minimum width=1.45cm] (qc) at (10.9,0) {sat8};
-  \node[hlsbox,minimum width=1.55cm] (relu) at (13.0,0) {$\rho_l$\\ReLU / id.};
-  \node[runtime] (yout) at (15.0,0) {$y_i^{(l)}$};
+  \node[op] (sum) at (9.8,0) {$+$};
+  \node[qbox,minimum width=1.45cm] (qc) at (11.6,0) {sat8};
+  \node[hlsbox,minimum width=1.55cm] (relu) at (13.6,0) {$\rho_l$\\ReLU / id.};
+  \node[runtime] (yout) at (15.5,0) {$y_i^{(l)}$};
   \node[ctime] (wroot) at (2.5,2.45) {$W_{\mathrm{root}}$};
   \node[ctime] (wneigh) at (5.5,-2.55) {$W_{\mathrm{neigh}},b$};
   \node[ctime] (sr) at (4.9,2.45) {$S_r$};
   \node[ctime] (sn) at (8.1,-2.55) {$S_n$};
-  \node[ctrl] (fsm) at (13.0,-1.6) {Layer FSM};
+  \node[ctrl] (fsm) at (13.6,-1.6) {Layer FSM};
   \draw[arr] (xin)--(root);
   \draw[bus] (xein)--(agg) pic[pos=.5]{buswidth=16};
   \draw[arr] (agg)--(neigh);
@@ -155,30 +162,43 @@ Keep fills ≤ 25% tint so black text stays readable, and check the greyscale co
 
 ```latex
 \begin{tikzpicture}[hw]
- \node[host] (host) at (-3.2,0.3) {Host\\(x86)};
- \node[cpu] (ps) at (0,2.2) {PS\\Cortex-A72};
- \node[extmem] (ddr) at (0,-1.9) {DDR4};
- \node[xbar,minimum height=5.4cm] (noc) at (2,0.15) {\rotatebox{90}{NoC}};
- \node[hlsbox] (k1) at (4.2,1.6) {mm2s\\(HLS)};
- \node[hlsbox] (k2) at (4.2,-1.9) {s2mm\\(HLS)};
- \node[bram] (buf) at (4.2,0.3) {BRAM buf};
- \pic (arr) at (7.0,-0.6) {aiearray};
- \draw[bus] (host) -- (host-|noc.west) node[lbl,midway,above]{PCIe Gen4};
- \draw[arr] (ps.east) -- (ps-|noc.west);
- \draw[arr,<->] (ddr.east) -- (ddr-|noc.west);
- \draw[bus] (k1-|noc.east)--(k1) pic[pos=.5]{buswidth=128};
- \draw[bus] (k2)--(k2-|noc.east);
- \draw[arr] (k1.east) -- ++(0.9,0) node[lbl,pos=0.55,above]{AXI4-S} |- ($(arr-s1.south)+(0,-0.35)$) -- (arr-s1.south);
- \draw[arr] (arr-s4.south) |- (k2.east);
- \draw[darr] (buf)--(k1); \draw[darr] (buf)--(k2);
- \begin{scope}[on background layer]
-   \node[psregion,fit=(ps),label={[grouplabel]above:PS}] {};
-   \node[plregion,fit=(k1)(k2)(buf),inner sep=8pt,label={[grouplabel]above:PL @ 300 MHz}] {};
-   \node[clkdomain,fit=(arr-box),inner sep=3pt,label={[grouplabel,text=hwaccent]above:AIE array $3\times4$ @ 1.25 GHz}] {};
- \end{scope}
+  \node[host] (host) at (-3.4,0.3) {Host\\(x86)};
+  \node[cpu] (ps) at (0,2.2) {PS\\Cortex-A72};
+  \node[extmem] (ddr) at (0,-2.0) {DDR4};
+  \node[xbar,minimum height=5.6cm] (noc) at (2,0.1) {\rotatebox{90}{NoC}};
+  \node[hlsbox] (k1) at (4.7,1.6) {mm2s\\(HLS)};
+  \node[hlsbox] (k2) at (4.7,-2.3) {s2mm\\(HLS)};
+  \node[bram] (buf) at (4.7,-0.35) {BRAM buf};
+  \pic (arr) at (8.3,0.1) {aiearray};
+
+  % routing levels
+  \def\chan{6.7}    % vertical channel between PL and AIE regions
+  \def\lvla{-1.7}   % mm2s -> AIE, under the AIE frame
+  \def\lvlb{-2.3}   % AIE -> s2mm, one level lower (= s2mm row)
+
+  \draw[bus] (host) -- (host-|noc.west) node[lbl,midway,above=2pt]{PCIe Gen4};
+  \draw[arr] (ps.east) -- (ps-|noc.west);
+  \draw[arr,<->] (ddr.east) -- (ddr-|noc.west);
+  \draw[bus] (k1-|noc.east) -- (k1) pic[pos=.4]{buswidth=128};
+  \draw[bus] (k2) -- (k2-|noc.east);
+  % mm2s -> shim 1: right into the channel, down, along level a, up into the shim
+  \draw[arr] (k1.east) -- (\chan,1.6)
+       -- node[lbl,rotate=90,below]{AXI4-S} (\chan,\lvla)
+       -- (arr-s1.south|-{(0,\lvla)}) -- (arr-s1.south);
+  % shim 4 -> s2mm: down to level b, left to s2mm
+  \draw[arr] (arr-s4.south) -- (arr-s4.south|-{(0,\lvlb)})
+       -- node[lbl,above,pos=0.2]{AXI4-S} (k2.east);
+  \draw[darr] (buf) -- (k1);
+  \draw[darr] (buf) -- (k2);
+
+  \begin{scope}[on background layer]
+    \node[psregion,fit=(ps),label={[grouplabel]above:PS}] {};
+    \node[plregion,fit=(k1)(k2)(buf),inner sep=8pt,label={[grouplabel]above:PL @ 300 MHz}] {};
+    \node[clkdomain,fit=(arr-box),inner sep=3pt,label={[grouplabel,text=hwaccent]above:AIE array $3\times4$ @ 1.25 GHz}] {};
+  \end{scope}
 \end{tikzpicture}
 ```
 
 ## Package source
 
-`hwfig.sty` (v1.1, by Pelayo Leguina, <pelayo.leguina.lopez@cern.ch>, LPPL 1.3c) ships next to this file. Changelog, gallery and examples live in the public `hwfig` repository; this skill is maintained there under `claude-skill/` and packaged with `claude-skill/package.sh`.
+`hwfig.sty` (v1.1, by Pelayo Leguina, <pelayo.leguina.lopez@cern.ch>, LPPL 1.3c) ships next to this file. Changelog, gallery and examples live in the public `hwfig` repository; this skill is maintained there under `skill/` and packaged with `skill/package.sh`.

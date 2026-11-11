@@ -7,22 +7,22 @@
 \foreach \pal in {grey,okabe}{%
 \hwpalette{\pal}%
 \begin{tikzpicture}[hw]
-  \node[runtime] (xin) at (0,1.4) {$X_i$};
-  \node[runtime] (xein) at (0,-1.4) {$(X,E)$};
+  \node[runtime] (xin) at (-0.9,1.4) {$X_i$};
+  \node[runtime] (xein) at (-0.9,-1.4) {$(X,E)$};
   \node[hlsbox] (root) at (2.5,1.4) {Root\\$W_{\mathrm{root}}x_i$};
   \node[qbox] (qr) at (4.9,1.4) {$Q_r$\\shift + sat8};
   \node[mem] (agg) at (2.5,-1.4) {Mean aggregation\\$m_i$};
   \node[hlsbox] (neigh) at (5.5,-1.4) {Neighbor\\$W_{\mathrm{neigh}}m_i+b$};
   \node[qbox] (qn) at (8.1,-1.4) {$Q_n$\\shift + sat8};
-  \node[op] (sum) at (9.0,0) {$+$};
-  \node[qbox,minimum width=1.45cm] (qc) at (10.9,0) {sat8};
-  \node[hlsbox,minimum width=1.55cm] (relu) at (13.0,0) {$\rho_l$\\ReLU / id.};
-  \node[runtime] (yout) at (15.0,0) {$y_i^{(l)}$};
+  \node[op] (sum) at (9.8,0) {$+$};
+  \node[qbox,minimum width=1.45cm] (qc) at (11.6,0) {sat8};
+  \node[hlsbox,minimum width=1.55cm] (relu) at (13.6,0) {$\rho_l$\\ReLU / id.};
+  \node[runtime] (yout) at (15.5,0) {$y_i^{(l)}$};
   \node[ctime] (wroot) at (2.5,2.45) {$W_{\mathrm{root}}$};
   \node[ctime] (wneigh) at (5.5,-2.55) {$W_{\mathrm{neigh}},b$};
   \node[ctime] (sr) at (4.9,2.45) {$S_r$};
   \node[ctime] (sn) at (8.1,-2.55) {$S_n$};
-  \node[ctrl] (fsm) at (13.0,-1.6) {Layer FSM};
+  \node[ctrl] (fsm) at (13.6,-1.6) {Layer FSM};
   \draw[arr] (xin)--(root);
   \draw[bus] (xein)--(agg) pic[pos=.5]{buswidth=16};
   \draw[arr] (agg)--(neigh);

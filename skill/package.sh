@@ -14,4 +14,4 @@ with zipfile.ZipFile("tikz-hardware-figures.zip", "w", zipfile.ZIP_DEFLATED) as 
     for i in z.infolist():
         print(f"  {i.filename}  {i.file_size} B")
 EOF
-echo "wrote claude-skill/tikz-hardware-figures.zip"
+echo "wrote skill/tikz-hardware-figures.zip"
