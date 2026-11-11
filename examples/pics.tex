@@ -1,0 +1,23 @@
+% The parametric pics, each sized with per-pic options.
+\documentclass[tikz,border=8pt]{standalone}
+\usepackage[okabe]{hwfig}
+\begin{document}
+\begin{tikzpicture}[hw]
+  \tikzset{t/.style={font=\scriptsize\ttfamily,text=black!70,anchor=west}}
+  \pic (A) at (0,0) {aiearray={rows=3,cols=4}};
+  \node[t] at (-0.6,2.65) {aiearray=\{rows=3,cols=4\}};
+  \pic (S) at (6.6,1.7) {systolic={rows=3,cols=3}};
+  \node[t] at (5.6,2.65) {systolic=\{rows=3,cols=3\}};
+  \pic (T) at (11.2,0.9) {addertree={depth=3}};
+  \node[t] at (10.6,2.65) {addertree=\{depth=3\}};
+  \pic (P) at (0,-3.2) {pipeline={labels={Load,MAC,Requant,Store}}};
+  \node[t] at (-0.6,-2.35) {pipeline=\{labels=\{Load,MAC,Requant,Store\}\}};
+  \pic (N) at (0.2,-5.0) {noc={rows=2,cols=4}};
+  \node[t] at (-0.6,-4.15) {noc=\{rows=2,cols=4\}};
+  \pic (F) at (9.4,-7.0) {fabric={fabricrows=9,columns={I,C,C,D,C,B,C,C,U,C,D,C,I}}};
+  \node[t] at (8.5,-3.0) {fabric=\{columns=\{I,C,C,D,C,B,...\}\}};
+  \foreach \k/\l in {1/IO,2/CLB,4/DSP,6/BRAM,9/URAM}{\node[font=\tiny,rotate=90,anchor=west,inner sep=1pt] at ($(F-c\k)+(0,0.04)$) {\l};}
+  \pic at (0,-7.6) {legend={legend={io/Port,comp/Compute,quant/Quant.,mem/Memory,op/Operator,ctrl/Control,const/Constant}}};
+  \node[t] at (-0.6,-7.15) {legend=\{legend=\{comp/Compute,mem/Memory,...\}\}};
+\end{tikzpicture}
+\end{document}

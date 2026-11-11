@@ -1,0 +1,54 @@
+\documentclass[tikz,border=6pt]{standalone}
+\usepackage{amsmath}
+\usepackage{hwfig}
+\begin{document}
+\foreach \pal in {grey,okabe,tol,nord,slate}{%
+\hwpalette{\pal}%
+\begin{tikzpicture}[hw]
+ \node[font=\bfseries] at (6,1.2) {palette: \pal};
+ \node[runtime] (a) at (0,0) {runtime};
+ \node[ctime] (b) at (2.2,0) {ctime};
+ \node[hlsbox] (c) at (4.6,0) {hlsbox\\two lines};
+ \node[qbox] (d) at (7,0) {qbox};
+ \node[op] (e) at (8.6,0) {$+$};
+ \node[mux] (f) at (9.6,0) {};
+ \node[mem] (g) at (11.2,0) {mem};
+ \node[fifo] (h) at (0,-1.5) {fifo};
+ \node[reg] (i) at (1.6,-1.5) {};
+ \node[ctrl] (j) at (3.2,-1.5) {ctrl FSM};
+ \node[lut] (k) at (4.9,-1.5) {LUT};
+ \node[dsp] (l) at (6.3,-1.5) {$\times c$\\two};
+ \node[bram] (m) at (7.9,-1.5) {BRAM};
+ \node[uram] (n) at (9.5,-1.5) {URAM};
+ \node[extmem] (o) at (11.3,-1.5) {DDR4};
+ \node[cpu] (p) at (0.4,-3.2) {PS A72};
+ \node[host] (q) at (2.9,-3.2) {Host};
+ \node[xbar] (r) at (4.6,-3.2) {\rotatebox{90}{AXI IC}};
+ \node[router] (s) at (5.8,-3.2) {R};
+ \node[pe] (t) at (6.9,-3.2) {PE};
+ \node[aie] (u) at (8.1,-3.2) {AIE};
+ \node[cdc] (v) at (9.2,-3.2) {};
+ \node[port] (w) at (10,-3.2) {};
+ \node[chip] (x) at (12,-3.6) {chip};
+ \draw[arr] (a)--(b); \draw[darr] (b)--(c); \draw[bus] (c)--(d) pic[pos=.5]{buswidth=32};
+ \draw[hot] (d)--(e) node[lbl,midway,above]{hot};
+ \draw[arr] (e)--(f.west); \draw[arr] (f.east)--(g);
+ \begin{scope}[on background layer]
+  \node[group,fit=(a)(b),label={[grouplabel]above:group}] {};
+  \node[clkdomain,fit=(t)(u),label={[grouplabel]above:clk}] {};
+  \node[psregion,fit=(p)] {};
+ \end{scope}
+ \pic at (0,-5) {legend};
+\end{tikzpicture}}
+\begin{tikzpicture}[hw]
+ \hwset{rows=2,cols=3} \pic (A) at (0,0) {aiearray};
+ \hwset{rows=3,cols=3} \pic (S) at (5,1) {systolic};
+ \hwset{depth=3} \pic (T) at (9.5,0.5) {addertree};
+ \hwset{labels={Load,MAC,Requant,Store}} \pic (P) at (0,-3.5) {pipeline};
+ \hwset{fabricrows=7,columns={I,C,C,D,C,B,C,U,C,I}} \pic (F) at (9.2,-4.5) {fabric};
+ \hwset{rows=2,cols=3} \pic (N) at (0,-5.5) {noc};
+ \draw[bus] (5,-6) -- (5,-8) pic[pos=.5]{buswidth=512};
+ \draw[bus] (6,-6) -- (8,-8) pic[pos=.5]{buswidth=64};
+ \draw[bus] (6,-8.5) -- (4,-8.5) pic[pos=.5]{buswidth=8};
+\end{tikzpicture}
+\end{document}

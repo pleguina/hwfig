@@ -1,0 +1,19 @@
+hwfig -- TikZ styles for hardware and dataflow figures
+Copyright (C) 2026 Pelayo Leguina <pelayo.leguina.lopez@cern.ch>
+
+This work may be distributed and/or modified under the conditions of the
+LaTeX Project Public License, either version 1.3c of this license or (at
+your option) any later version. The latest version of this license is in
+
+    https://www.latex-project.org/lppl.txt
+
+and version 1.3c or later is part of all distributions of LaTeX version
+2008 or later.
+
+This work has the LPPL maintenance status `maintained'.
+
+The Current Maintainer of this work is Pelayo Leguina
+<pelayo.leguina.lopez@cern.ch>.
+
+This work consists of the file hwfig.sty and the accompanying examples,
+tests and documentation in this repository.

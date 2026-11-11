@@ -1,0 +1,46 @@
+% Catalogue of every node and wire style, one page per palette.
+\documentclass[tikz,border=8pt]{standalone}
+\usepackage{hwfig}
+\newcommand\stylecap[2]{\node[font=\scriptsize\ttfamily,text=black!70,anchor=north] at ($(#1.south)+(0,-0.12)$) {#2};}
+\begin{document}
+\foreach \pal in {grey,okabe,tol,nord,slate}{%
+\hwpalette{\pal}%
+\begin{tikzpicture}[hw]
+  \node[font=\normalsize\bfseries,anchor=west] at (-0.9,1.15) {\texttt{\textbackslash hwpalette\{\pal\}}};
+  % row 1: dataflow roles
+  \node[runtime] (a) at (0,0) {$x_i$};               \stylecap{a}{runtime}
+  \node[ctime] (b) at (1.8,0) {$W$};                 \stylecap{b}{ctime}
+  \node[hlsbox] (c) at (3.9,0) {kernel};             \stylecap{c}{hlsbox}
+  \node[qbox] (d) at (6.1,0) {shift+sat8};           \stylecap{d}{qbox}
+  \node[op] (e) at (7.7,0) {$+$};                    \stylecap{e}{op}
+  \node[mux] (f) at (8.8,0) {};                      \stylecap{f}{mux}
+  \node[demux] (g) at (9.8,0) {};                    \stylecap{g}{demux}
+  \node[ctrl] (h) at (11.4,0) {FSM};                 \stylecap{h}{ctrl}
+  % row 2: memory
+  \node[mem] (i) at (0.3,-1.9) {buffer};             \stylecap{i}{mem}
+  \node[bram] (j) at (2.3,-1.9) {BRAM};              \stylecap{j}{bram}
+  \node[uram] (k) at (4.0,-1.9) {URAM};              \stylecap{k}{uram}
+  \node[fifo] (l) at (5.9,-1.9) {stream};            \stylecap{l}{fifo}
+  \node[reg] (m) at (7.5,-1.9) {};                   \stylecap{m}{reg / ff}
+  \node[extmem] (n) at (9.0,-1.9) {DDR4};            \stylecap{n}{extmem}
+  \node[lut] (o) at (10.6,-1.9) {LUT};               \stylecap{o}{lut}
+  \node[dsp] (p) at (11.9,-1.9) {$a\times b$};       \stylecap{p}{dsp}
+  % row 3: system
+  \node[cpu] (q) at (0.3,-3.9) {PS\\A72};            \stylecap{q}{cpu}
+  \node[host] (r) at (2.6,-3.9) {Host};              \stylecap{r}{host}
+  \node[xbar,minimum height=1.2cm] (s) at (4.3,-3.9) {\rotatebox{90}{AXI}}; \stylecap{s}{xbar}
+  \node[router] (t) at (5.5,-3.9) {R};               \stylecap{t}{router}
+  \node[pe] (u) at (6.6,-3.9) {PE};                  \stylecap{u}{pe}
+  \node[aie] (v) at (7.8,-3.9) {AIE};                \stylecap{v}{aie}
+  \node[cdc] (w) at (9.0,-3.9) {};                   \stylecap{w}{cdc}
+  \node[port] (x) at (9.9,-3.9) {};                  \stylecap{x}{port}
+  \node[chip,minimum width=1.9cm,minimum height=1.2cm] (y) at (11.6,-3.9) {die}; \stylecap{y}{chip}
+  % row 4: wires
+  \draw[arr] (-0.6,-5.6) -- (0.9,-5.6);  \node[font=\scriptsize\ttfamily,text=black!70] at (0.15,-5.95) {arr};
+  \draw[darr] (1.6,-5.6) -- (3.1,-5.6); \node[font=\scriptsize\ttfamily,text=black!70] at (2.35,-5.95) {darr};
+  \draw[hot] (3.8,-5.6) -- (5.3,-5.6);  \node[font=\scriptsize\ttfamily,text=black!70] at (4.55,-5.95) {hot};
+  \draw[bus] (6.0,-5.6) -- (7.7,-5.6) pic[pos=.45]{buswidth=512}; \node[font=\scriptsize\ttfamily,text=black!70] at (6.85,-5.95) {bus + buswidth};
+  \draw[arr] (8.5,-5.6) -- (10.2,-5.6) node[lbl,midway,above]{AXI4-S}; \node[font=\scriptsize\ttfamily,text=black!70] at (9.35,-5.95) {lbl};
+  \node[group,minimum width=1.6cm,minimum height=0.6cm,label={[grouplabel]left:PL}] (z) at (11.9,-5.6) {}; \node[font=\scriptsize\ttfamily,text=black!70] at (11.9,-6.1) {group};
+\end{tikzpicture}}
+\end{document}

@@ -1,0 +1,28 @@
+% Versal-style SoC: host, PS, NoC, PL kernels and an AIE array.
+\documentclass[tikz,border=6pt]{standalone}
+\usepackage[okabe]{hwfig}
+\begin{document}
+\begin{tikzpicture}[hw]
+  \node[host] (host) at (-3.2,0.3) {Host\\(x86)};
+  \node[cpu] (ps) at (0,2.2) {PS\\Cortex-A72};
+  \node[extmem] (ddr) at (0,-1.9) {DDR4};
+  \node[xbar,minimum height=5.4cm] (noc) at (2,0.15) {\rotatebox{90}{NoC}};
+  \node[hlsbox] (k1) at (4.2,1.6) {mm2s\\(HLS)};
+  \node[hlsbox] (k2) at (4.2,-1.9) {s2mm\\(HLS)};
+  \node[bram] (buf) at (4.2,0.3) {BRAM buf};
+  \pic (arr) at (7.0,-0.45) {aiearray};
+  \draw[bus] (host) -- (host-|noc.west) node[lbl,midway,above=2pt]{PCIe Gen4};
+  \draw[arr] (ps.east) -- (ps-|noc.west);
+  \draw[arr,<->] (ddr.east) -- (ddr-|noc.west);
+  \draw[bus] (k1-|noc.east)--(k1) pic[pos=.35]{buswidth=128};
+  \draw[bus] (k2)--(k2-|noc.east);
+  \draw[arr] (k1.east) -- ++(0.9,0) node[lbl,pos=0.45,above]{AXI4-S} |- ($(arr-s1.south)+(0,-0.35)$) -- (arr-s1.south);
+  \draw[arr] (arr-s4.south) |- (k2.east);
+  \draw[darr] (buf)--(k1); \draw[darr] (buf)--(k2);
+  \begin{scope}[on background layer]
+    \node[psregion,fit=(ps),label={[grouplabel]above:PS}] {};
+    \node[plregion,fit=(k1)(k2)(buf),inner sep=8pt,label={[grouplabel]above:PL @ 300 MHz}] {};
+    \node[clkdomain,fit=(arr-box),inner sep=3pt,label={[grouplabel,text=hwaccent]above:AIE array $3\times4$ @ 1.25 GHz}] {};
+  \end{scope}
+\end{tikzpicture}
+\end{document}

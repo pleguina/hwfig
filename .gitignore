@@ -1,0 +1,9 @@
+*.aux
+*.log
+*.out
+*.synctex.gz
+*.fdb_latexmk
+*.fls
+examples/*.pdf
+tests/*.pdf
+claude-skill/*.zip

@@ -1,0 +1,334 @@
+% hwfig.sty -- TikZ styles for hardware / dataflow figures
+% Copyright (C) 2026 Pelayo Leguina <pelayo.leguina.lopez@cern.ch>
+% This work may be distributed and/or modified under the conditions of the
+% LaTeX Project Public License, version 1.3c or later
+% (https://www.latex-project.org/lppl.txt).  Maintenance status: maintained.
+%
+% Usage:  \usepackage{hwfig}            % grey palette
+%         \usepackage[okabe]{hwfig}     % or palette=okabe
+%         \hwpalette{grey|okabe|tol|nord|slate}   % switch anywhere (group-local)
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{hwfig}[2026/11/11 v1.1 hardware figure styles]
+\RequirePackage{xcolor}
+\RequirePackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,fit,backgrounds,calc,shapes.geometric,decorations.markings}
+
+% ---- options: \usepackage[<palette>]{hwfig} or [palette=<palette>] ----------
+\def\hw@initpal{grey}
+\def\hw@setopt#1=#2\@nil{\def\hw@tmp{#2}%
+  \ifx\hw@tmp\@empty\edef\hw@initpal{#1}\else\hw@setopt@b#2\@nil\fi}
+\def\hw@setopt@b#1=\@nil{\edef\hw@initpal{#1}}
+\DeclareOption*{\expandafter\hw@setopt\CurrentOption=\@nil}
+\ProcessOptions\relax
+
+% ---- role colours: <role>D = draw, <role>F = fill --------------------------
+% Public API for custom palettes:
+%   \hwdefinepalette{mine}{%
+%     \hwrole{io}{black}{white} \hwrole{comp}{blue}{blue!10} ...   (8 roles:
+%       io comp quant const op mem ctrl group)
+%     \hwwires{<wire>}{<constant wire>}{<accent / hot path>}}
+\newcommand\hw@role[3]{\colorlet{hw#1D}{#2}\colorlet{hw#1F}{#3}}
+\newcommand\hwrole[3]{\hw@role{#1}{#2}{#3}}
+\newcommand\hwwires[3]{\colorlet{hwwire}{#1}\colorlet{hwcwire}{#2}\colorlet{hwaccent}{#3}}
+\newcommand\hwdefinepalette[2]{\expandafter\def\csname hw@pal@#1\endcsname{#2}}
+
+\newcommand\hwpalette[1]{%
+  \ifcsname hw@pal@#1\endcsname\csname hw@pal@#1\endcsname
+  \else\PackageError{hwfig}{Unknown palette `#1'}%
+    {Built-in palettes: grey, okabe, tol, nord, slate.\MessageBreak
+     Define your own with \string\hwdefinepalette.}\fi}
+
+% Greyscale: print-safe, matches the original template
+\newcommand\hw@pal@grey{%
+  \hw@role{io}{black}{white}%
+  \hw@role{comp}{black}{white}%
+  \hw@role{quant}{black}{gray!20}%
+  \hw@role{const}{black!70}{gray!8}%
+  \hw@role{op}{black}{gray!12}%
+  \hw@role{mem}{black}{gray!25}%
+  \hw@role{ctrl}{black}{gray!35}%
+  \hw@role{group}{black!60}{gray!4}%
+  \colorlet{hwwire}{black}\colorlet{hwcwire}{black!60}\colorlet{hwaccent}{black}}
+
+% Okabe-Ito: colour-blind safe
+\definecolor{hwOIblue}{HTML}{0072B2}\definecolor{hwOIorange}{HTML}{E69F00}
+\definecolor{hwOIgreen}{HTML}{009E73}\definecolor{hwOIsky}{HTML}{56B4E9}
+\definecolor{hwOIverm}{HTML}{D55E00}\definecolor{hwOIpurple}{HTML}{CC79A7}
+\newcommand\hw@pal@okabe{%
+  \hw@role{io}{black!80}{white}%
+  \hw@role{comp}{hwOIblue!80!black}{hwOIsky!18}%
+  \hw@role{quant}{hwOIorange!80!black}{hwOIorange!20}%
+  \hw@role{const}{black!55}{black!5}%
+  \hw@role{op}{hwOIverm!85!black}{hwOIverm!12}%
+  \hw@role{mem}{hwOIgreen!80!black}{hwOIgreen!16}%
+  \hw@role{ctrl}{hwOIpurple!80!black}{hwOIpurple!16}%
+  \hw@role{group}{hwOIblue!45}{hwOIsky!5}%
+  \colorlet{hwwire}{black!85}\colorlet{hwcwire}{black!50}\colorlet{hwaccent}{hwOIverm}}
+
+% Paul Tol "muted": colour-blind safe, softer
+\definecolor{hwTindigo}{HTML}{332288}\definecolor{hwTteal}{HTML}{44AA99}
+\definecolor{hwTsand}{HTML}{DDCC77}\definecolor{hwTrose}{HTML}{CC6677}
+\definecolor{hwTwine}{HTML}{882255}\definecolor{hwTcyan}{HTML}{88CCEE}
+\newcommand\hw@pal@tol{%
+  \hw@role{io}{black!80}{white}%
+  \hw@role{comp}{hwTindigo}{hwTcyan!22}%
+  \hw@role{quant}{hwTsand!60!black}{hwTsand!35}%
+  \hw@role{const}{black!55}{black!5}%
+  \hw@role{op}{hwTwine}{hwTrose!15}%
+  \hw@role{mem}{hwTteal!75!black}{hwTteal!20}%
+  \hw@role{ctrl}{hwTrose!80!black}{hwTrose!20}%
+  \hw@role{group}{hwTindigo!40}{hwTcyan!6}%
+  \colorlet{hwwire}{black!85}\colorlet{hwcwire}{black!50}\colorlet{hwaccent}{hwTwine}}
+
+% Nord: cool, slide-friendly
+\definecolor{hwNblue}{HTML}{5E81AC}\definecolor{hwNfrost}{HTML}{88C0D0}
+\definecolor{hwNgreen}{HTML}{A3BE8C}\definecolor{hwNyellow}{HTML}{EBCB8B}
+\definecolor{hwNred}{HTML}{BF616A}\definecolor{hwNpurple}{HTML}{B48EAD}
+\definecolor{hwNdark}{HTML}{2E3440}
+\newcommand\hw@pal@nord{%
+  \hw@role{io}{hwNdark}{white}%
+  \hw@role{comp}{hwNblue!90!black}{hwNfrost!25}%
+  \hw@role{quant}{hwNyellow!55!black}{hwNyellow!35}%
+  \hw@role{const}{hwNdark!55}{hwNdark!4}%
+  \hw@role{op}{hwNred!85!black}{hwNred!14}%
+  \hw@role{mem}{hwNgreen!60!black}{hwNgreen!28}%
+  \hw@role{ctrl}{hwNpurple!80!black}{hwNpurple!22}%
+  \hw@role{group}{hwNblue!45}{hwNfrost!7}%
+  \colorlet{hwwire}{hwNdark}\colorlet{hwcwire}{hwNdark!55}\colorlet{hwaccent}{hwNred}}
+
+% Slate: blue-grey + mauve + coral (scientific-slide look)
+\definecolor{hwSslate}{HTML}{4A6378}\definecolor{hwSmauve}{HTML}{9B7BA6}
+\definecolor{hwScoral}{HTML}{E07A5F}\definecolor{hwSsage}{HTML}{81A684}
+\newcommand\hw@pal@slate{%
+  \hw@role{io}{hwSslate}{white}%
+  \hw@role{comp}{hwSslate}{hwSslate!12}%
+  \hw@role{quant}{hwSmauve!85!black}{hwSmauve!20}%
+  \hw@role{const}{hwSslate!60}{hwSslate!4}%
+  \hw@role{op}{hwScoral!85!black}{hwScoral!15}%
+  \hw@role{mem}{hwSsage!70!black}{hwSsage!22}%
+  \hw@role{ctrl}{hwSmauve!70!black}{hwSmauve!10}%
+  \hw@role{group}{hwSslate!45}{hwSslate!3}%
+  \colorlet{hwwire}{hwSslate!80!black}\colorlet{hwcwire}{hwSslate!60}\colorlet{hwaccent}{hwScoral}}
+
+\hwpalette{\hw@initpal}
+
+% ---- styles ----------------------------------------------------------------
+\tikzset{
+  hw/.style={font=\footnotesize, line width=0.5pt, >={Latex[length=2mm]}},
+  % run-time data / ports
+  runtime/.style={draw=hwioD,fill=hwioF,rounded corners,minimum height=0.6cm,align=center,inner sep=3pt},
+  % compile-time constants (weights, scales, config)
+  ctime/.style={draw=hwconstD,fill=hwconstF,dashed,rounded corners,minimum height=0.5cm,align=center,inner sep=2pt,font=\footnotesize},
+  % compute kernel / HLS function / AIE kernel
+  hlsbox/.style={draw=hwcompD,fill=hwcompF,minimum height=0.8cm,minimum width=1.9cm,align=center,inner sep=3pt},
+  % quantiser / requantise / saturate
+  qbox/.style={draw=hwquantD,fill=hwquantF,minimum height=0.7cm,minimum width=1.35cm,align=center,inner sep=2pt},
+  % memory: BRAM/URAM/DDR buffer (double top/bottom rule)
+  mem/.style={draw=hwmemD,fill=hwmemF,minimum height=0.8cm,minimum width=1.6cm,align=center,inner sep=3pt,
+    path picture={\draw[hwmemD] ($(path picture bounding box.north west)+(0,-2pt)$)--($(path picture bounding box.north east)+(0,-2pt)$);
+                  \draw[hwmemD] ($(path picture bounding box.south west)+(0,2pt)$)--($(path picture bounding box.south east)+(0,2pt)$);}},
+  % FIFO / stream: vertical slots on the right
+  fifo/.style={draw=hwmemD,fill=hwmemF,minimum height=0.6cm,minimum width=1.4cm,align=center,inner sep=2pt,
+    path picture={\foreach \k in {1,2,3}{\draw[hwmemD] ($(path picture bounding box.north east)+(-\k*3pt,0)$)--($(path picture bounding box.south east)+(-\k*3pt,0)$);}}},
+  % register with clock wedge
+  reg/.style={draw=hwmemD,fill=hwmemF,minimum height=0.7cm,minimum width=0.55cm,inner sep=1pt,
+    path picture={\draw[hwmemD] ($(path picture bounding box.south)+(-3pt,0)$)--($(path picture bounding box.south)+(0,4pt)$)--($(path picture bounding box.south)+(3pt,0)$);}},
+  % control / FSM / scheduler
+  ctrl/.style={draw=hwctrlD,fill=hwctrlF,rounded corners=4pt,minimum height=0.7cm,minimum width=1.6cm,align=center,inner sep=3pt},
+  % arithmetic operator (+, x, max)
+  op/.style={draw=hwopD,fill=hwopF,circle,minimum size=0.55cm,inner sep=0pt},
+  % multiplexer (inputs on west, output on east)
+  mux/.style={minimum width=0.45cm,minimum height=1cm,inner sep=0pt,font=\scriptsize,
+    path picture={\path[draw=hwopD,fill=hwopF,line width=0.5pt]
+      ($(path picture bounding box.north west)+(0.25pt,-0.25pt)$)--($(path picture bounding box.north east)+(-0.25pt,-6pt)$)
+      --($(path picture bounding box.south east)+(-0.25pt,6pt)$)--($(path picture bounding box.south west)+(0.25pt,0.25pt)$)--cycle;}},
+  % demultiplexer (input on west, outputs on east)
+  demux/.style={minimum width=0.45cm,minimum height=1cm,inner sep=0pt,font=\scriptsize,
+    path picture={\path[draw=hwopD,fill=hwopF,line width=0.5pt]
+      ($(path picture bounding box.north west)+(0.25pt,-6pt)$)--($(path picture bounding box.north east)+(-0.25pt,-0.25pt)$)
+      --($(path picture bounding box.south east)+(-0.25pt,0.25pt)$)--($(path picture bounding box.south west)+(0.25pt,6pt)$)--cycle;}},
+  % grouping frame (use on background layer with fit=...)
+  group/.style={draw=hwgroupD,fill=hwgroupF,rounded corners,inner sep=5pt},
+  grouplabel/.style={font=\footnotesize\itshape,text=hwgroupD!80!black},
+  % wires
+  arr/.style={draw=hwwire,-{Latex[length=2mm]}},
+  darr/.style={draw=hwcwire,-{Latex[length=1.8mm]},dashed},
+  bus/.style={draw=hwwire,line width=1.2pt,-{Latex[length=2.4mm,width=2mm]}},
+  hot/.style={draw=hwaccent,line width=1pt,-{Latex[length=2mm]}},  % highlighted / critical path
+  % edge label (protocol / signal name), e.g.  node[lbl]{AXI4-S}
+  lbl/.style={font=\scriptsize,inner sep=1.5pt,text=hwwire},
+  % same, with a white backing so it stays readable over crossing wires
+  lblbox/.style={lbl,fill=white,inner sep=1pt},
+  % --- FPGA / SoC primitives --------------------------------------------
+  % DSP slice; the "DSP" tag sits just outside the top-right corner so it
+  % never collides with multi-line content
+  dsp/.style={draw=hwopD,fill=hwopF,minimum width=1.1cm,minimum height=0.9cm,align=center,inner sep=2pt,
+    label={[font=\tiny,text=hwopD,inner sep=1pt,anchor=south east]north east:DSP}},
+  lut/.style={draw=hwcompD,fill=hwcompF,minimum width=0.8cm,minimum height=0.8cm,align=center,inner sep=1pt,font=\scriptsize},
+  ff/.style={reg},
+  bram/.style={mem,minimum width=1.2cm},
+  uram/.style={mem,minimum width=1.2cm,line width=0.9pt},
+  extmem/.style={draw=hwmemD,fill=hwmemF,cylinder,shape border rotate=90,aspect=0.18,
+    minimum height=1.1cm,minimum width=1.3cm,align=center,inner sep=2pt},          % DDR / HBM
+  cpu/.style={draw=hwctrlD,fill=hwctrlF,double,double distance=1.2pt,minimum width=1.8cm,minimum height=1cm,align=center,inner sep=3pt}, % PS / ARM / RISC-V
+  host/.style={draw=hwioD,fill=hwioF,minimum width=1.8cm,minimum height=1cm,align=center,inner sep=3pt,
+    path picture={\fill[hwioD!25] (path picture bounding box.north west) rectangle ($(path picture bounding box.north east)+(0,-3pt)$);}},
+  xbar/.style={draw=hwopD,fill=hwopF,minimum width=0.6cm,minimum height=2.2cm,align=center,inner sep=1pt,font=\scriptsize}, % AXI interconnect / crossbar (use \rotatebox for text)
+  router/.style={draw=hwopD,fill=hwopF,diamond,aspect=1,minimum size=0.75cm,inner sep=0pt,font=\scriptsize},   % NoC router / switch
+  pe/.style={draw=hwcompD,fill=hwcompF,minimum size=0.75cm,inner sep=1pt,font=\scriptsize,align=center},       % processing element
+  port/.style={draw=hwioD,fill=hwioD,minimum size=3pt,inner sep=0pt},                                          % pin / port marker
+  chip/.style={draw=hwioD,fill=hwgroupF,thick,minimum width=3cm,minimum height=2cm,align=center,inner sep=4pt,
+    path picture={\foreach \t in {0.15,0.3,...,0.86}{%
+      \draw[hwioD,thick] ($(path picture bounding box.north west)!\t!(path picture bounding box.north east)$)--++(0,-3pt);
+      \draw[hwioD,thick] ($(path picture bounding box.south west)!\t!(path picture bounding box.south east)$)--++(0,3pt);
+      \draw[hwioD,thick] ($(path picture bounding box.south west)!\t!(path picture bounding box.north west)$)--++(3pt,0);
+      \draw[hwioD,thick] ($(path picture bounding box.south east)!\t!(path picture bounding box.north east)$)--++(-3pt,0);}}},
+  % --- regions -------------------------------------------------------------
+  clkdomain/.style={draw=#1,dash pattern=on 4pt off 2pt,rounded corners,inner sep=6pt,fill=#1!4},
+  clkdomain/.default=hwaccent,
+  plregion/.style={group},                                       % PL / fabric region
+  psregion/.style={draw=hwctrlD,fill=hwctrlF!40,rounded corners,inner sep=5pt},
+  cdc/.style={draw=hwaccent,fill=white,minimum width=0.5cm,minimum height=0.5cm,inner sep=0pt,font=\tiny,
+    path picture={\draw[hwaccent] (path picture bounding box.south west)--(path picture bounding box.north east);}},
+}
+
+% ---- parameters for the parametric pics ------------------------------------
+% Set globally-in-scope with \hwset{...}, or per pic:  \pic (a) at (0,0) {aiearray={rows=2,cols=4}};
+\pgfkeys{/hw/.is family,/hw/.cd,
+  rows/.initial=3, cols/.initial=4, depth/.initial=3,
+  dx/.initial=1.15, dy/.initial=0.85,
+  labels/.initial={S1,S2,S3,S4},
+  columns/.initial={C,C,D,C,B,C,C,D,C,B,C,C},  % fabric: C=CLB, D=DSP, B=BRAM, U=URAM, I=IO
+  fabricrows/.initial=8,
+  tilelabel/.initial={AIE},
+  nocpe/.initial=true,
+  legend/.initial={comp/Compute,quant/Quant.,mem/Memory,op/Operator,ctrl/Control,const/Const.}}
+\newcommand\hwset[1]{\pgfkeys{/hw/.cd,#1}}
+\def\hw@v#1{\pgfkeysvalueof{/hw/#1}}
+\def\hw@true{true}
+
+\tikzset{
+  % bus-width tick:   \draw[bus] (a) -- (b) pic[pos=.5]{buswidth=32};
+  % label sits right of the tick (clear of horizontal AND vertical wires);
+  % buswidth' puts it on the left instead.
+  pics/buswidth/.style={code={
+    \draw[hwwire,line width=0.5pt,-] (-2.5pt,-3.5pt)--(2.5pt,3.5pt);
+    \node[font=\tiny,inner sep=1pt,text=hwwire,anchor=south west] at (3pt,1pt) {#1};}},
+  pics/buswidth'/.style={code={
+    \draw[hwwire,line width=0.5pt,-] (-2.5pt,-3.5pt)--(2.5pt,3.5pt);
+    \node[font=\tiny,inner sep=1pt,text=hwwire,anchor=south east] at (-3pt,1pt) {#1};}},
+  % AIE tile: core (left 62%) + local data memory (right); the label is
+  % centred on the core part
+  aie/.style={draw=hwcompD,fill=hwcompF,minimum width=0.9cm,minimum height=0.62cm,inner sep=1pt,font=\tiny,
+    execute at begin node={\hspace*{-0.3cm}},
+    path picture={\fill[hwmemF] ($(path picture bounding box.south west)!0.62!(path picture bounding box.south east)$) rectangle (path picture bounding box.north east);
+      \draw[hwmemD] ($(path picture bounding box.south west)!0.62!(path picture bounding box.south east)$)--($(path picture bounding box.north west)!0.62!(path picture bounding box.north east)$);}},
+  %
+  % pic{aiearray}: rows x cols AIE tiles + PL-interface shim row. Tiles: (<name>-t<r>-<c>) (r=1 bottom), shim: (<name>-s<c>), frame: (<name>-box)
+  pics/aiearray/.default={},
+  pics/aiearray/.style={code={\hwset{#1}%
+    \pgfmathtruncatemacro\hwR{\hw@v{rows}}\pgfmathtruncatemacro\hwC{\hw@v{cols}}%
+    \pgfmathsetmacro\hwdx{\hw@v{dx}}\pgfmathsetmacro\hwdy{\hw@v{dy}}%
+    \foreach \c in {1,...,\hwC}{%
+      \node[draw=hwioD,fill=hwioF,minimum width=0.9cm,minimum height=0.32cm,inner sep=0pt,font=\tiny] (-s\c) at ({(\c-1)*\hwdx},{-0.78}) {shim};
+      \foreach \r in {1,...,\hwR}{\node[aie] (-t\r-\c) at ({(\c-1)*\hwdx},{(\r-1)*\hwdy}) {\hw@v{tilelabel}};}}%
+    \foreach \c in {1,...,\hwC}{\foreach \r in {1,...,\hwR}{%
+      \ifnum\c<\hwC \draw[hwcwire,-{Latex[length=1.2mm]}] ({(\c-1)*\hwdx+0.45},{(\r-1)*\hwdy})--({\c*\hwdx-0.45},{(\r-1)*\hwdy});\fi
+      \ifnum\r<\hwR \draw[hwcwire,-{Latex[length=1.2mm]}] ({(\c-1)*\hwdx-0.15},{(\r-1)*\hwdy+0.31})--({(\c-1)*\hwdx-0.15},{\r*\hwdy-0.31});\fi}%
+      \draw[hwcwire,{Latex[length=1.2mm]}-{Latex[length=1.2mm]}] ({(\c-1)*\hwdx},-0.62)--({(\c-1)*\hwdx},-0.31);}%
+    \node[group,fill=none,minimum width={(\hwC-1)*\hwdx*1cm+1.3cm},minimum height={(\hwR-1)*\hwdy*1cm+1.91cm},anchor=center]
+      (-box) at ({(\hwC-1)*\hwdx/2},{((\hwR-1)*\hwdy-0.63)/2}) {};
+  }},
+  %
+  % pic{systolic}: rows x cols PEs, data flows right, partial sums flow down. PEs: (<name>-pe<r>-<c>), r=1 is top row
+  pics/systolic/.default={},
+  pics/systolic/.style={code={\hwset{#1}%
+    \pgfmathtruncatemacro\hwR{\hw@v{rows}}\pgfmathtruncatemacro\hwC{\hw@v{cols}}%
+    \foreach \r in {1,...,\hwR}{\foreach \c in {1,...,\hwC}{%
+      \node[pe] (-pe\r-\c) at ({(\c-1)*1.1},{-(\r-1)*1.1}) {PE};}}%
+    \foreach \r in {1,...,\hwR}{\foreach \c in {1,...,\hwC}{%
+      \ifnum\c<\hwC \draw[hwwire,-{Latex[length=1.5mm]}] ({(\c-1)*1.1+0.375},{-(\r-1)*1.1})--({\c*1.1-0.375},{-(\r-1)*1.1});\fi
+      \ifnum\r<\hwR \draw[hwcwire,-{Latex[length=1.5mm]}] ({(\c-1)*1.1},{-(\r-1)*1.1-0.375})--({(\c-1)*1.1},{-\r*1.1+0.375});\fi}%
+      \draw[hwwire,-{Latex[length=1.5mm]}] ({-0.85},{-(\r-1)*1.1})--({-0.375},{-(\r-1)*1.1});}%
+    \foreach \c in {1,...,\hwC}{\draw[hwcwire,-{Latex[length=1.5mm]}] ({(\c-1)*1.1},0.85)--({(\c-1)*1.1},0.375);}%
+  }},
+  %
+  % pic{addertree}: 2^depth inputs reduced by op nodes. Inputs (<name>-in<k>), adders (<name>-a<level>-<k>), output coord (<name>-out)
+  pics/addertree/.default={},
+  pics/addertree/.style={code={\hwset{#1}%
+    \pgfmathtruncatemacro\hwD{\hw@v{depth}}\pgfmathtruncatemacro\hwN{2^\hwD}%
+    \foreach \k in {1,...,\hwN}{\coordinate (-in\k) at (0,{(\hwN+1)/2*0.45-\k*0.45});
+      \draw[hwwire] (-0.3,{(\hwN+1)/2*0.45-\k*0.45})--(0,{(\hwN+1)/2*0.45-\k*0.45});}%
+    \foreach \l in {1,...,\hwD}{%
+      \pgfmathtruncatemacro\m{2^(\hwD-\l)}\pgfmathsetmacro\hwsp{0.45*2^\l}%
+      \foreach \k in {1,...,\m}{%
+        \pgfmathtruncatemacro\ka{2*\k-1}\pgfmathtruncatemacro\kb{2*\k}\pgfmathtruncatemacro\lp{\l-1}%
+        \pgfmathsetmacro\y{(\m+1)/2*\hwsp-\k*\hwsp}%
+        \node[op,minimum size=0.42cm] (-a\l-\k) at ({\l*0.9},\y) {$+$};
+        \pgfmathsetmacro\spp{0.45*2^\lp}\pgfmathtruncatemacro\mp{2^(\hwD-\lp)}%
+        \pgfmathsetmacro\ya{(\mp+1)/2*\spp-\ka*\spp}\pgfmathsetmacro\yb{(\mp+1)/2*\spp-\kb*\spp}%
+        \draw[hwwire,-{Latex[length=1.2mm]}] ({\lp*0.9+(\lp>0)*0.21},\ya) -| ({\l*0.9-0.35},\y) -- ({\l*0.9-0.21},\y);
+        \draw[hwwire] ({\lp*0.9+(\lp>0)*0.21},\yb) -| ({\l*0.9-0.35},\y);}}%
+    \coordinate (-out) at ({\hwD*0.9+0.21},0);
+  }},
+  %
+  % pic{pipeline}: labelled stages separated by pipeline registers. Stages: (<name>-st<k>), regs (<name>-r<k>)
+  pics/pipeline/.default={},
+  pics/pipeline/.style={code={\hwset{#1}%
+    \edef\hwlabels{\hw@v{labels}}%
+    \foreach \lab [count=\k] in \hwlabels {%
+      \node[hlsbox,minimum width=1.3cm] (-st\k) at ({(\k-1)*2.1},0) {\lab};
+      \node[reg,minimum height=0.9cm] (-r\k) at ({(\k-1)*2.1+1.05},0) {};
+      \draw[hwwire,-{Latex[length=1.5mm]}] (-st\k.east)--(-r\k.west);
+      \ifnum\k>1 \pgfmathtruncatemacro\kp{\k-1}\draw[hwwire,-{Latex[length=1.5mm]}] (-r\kp.east)--(-st\k.west);\fi}%
+  }},
+  %
+  % pic{fabric}: column-based FPGA floorplan sketch (CLB / DSP / BRAM / URAM / IO columns).
+  % Tall sites (DSP/BRAM = 2 rows, URAM = 4 rows) are trimmed at the top so any
+  % fabricrows value stays rectangular.  Column tops: (<name>-c<k>)
+  pics/fabric/.default={},
+  pics/fabric/.style={code={\hwset{#1}%
+    \pgfmathtruncatemacro\hwR{\hw@v{fabricrows}}\edef\hwcols{\hw@v{columns}}%
+    \foreach \t [count=\c] in \hwcols {%
+      \foreach \r in {1,...,\hwR}{%
+        \if\t C \fill[hwcompF,draw=hwcompD,line width=0.3pt] ({(\c-1)*0.32},{(\r-1)*0.32}) rectangle ++(0.26,0.26);\fi
+        \if\t I \fill[hwioF,draw=hwioD,line width=0.6pt] ({(\c-1)*0.32},{(\r-1)*0.32}) rectangle ++(0.26,0.26);\fi}%
+      \if\t D \foreach \r in {1,3,...,\hwR}{\pgfmathtruncatemacro\hh{min(2,\hwR-\r+1)}%
+        \fill[hwopF,draw=hwopD,line width=0.3pt] ({(\c-1)*0.32},{(\r-1)*0.32}) rectangle ++(0.26,{\hh*0.32-0.06});}\fi
+      \if\t B \foreach \r in {1,3,...,\hwR}{\pgfmathtruncatemacro\hh{min(2,\hwR-\r+1)}%
+        \fill[hwmemF,draw=hwmemD,line width=0.3pt] ({(\c-1)*0.32},{(\r-1)*0.32}) rectangle ++(0.26,{\hh*0.32-0.06});}\fi
+      \if\t U \foreach \r in {1,5,...,\hwR}{\pgfmathtruncatemacro\hh{min(4,\hwR-\r+1)}%
+        \fill[hwmemD!40,draw=hwmemD,line width=0.3pt] ({(\c-1)*0.32},{(\r-1)*0.32}) rectangle ++(0.26,{\hh*0.32-0.06});}\fi
+      \coordinate (-c\c) at ({(\c-1)*0.32+0.13},{\hwR*0.32});}%
+  }},
+  %
+  % pic{noc}: rows x cols mesh of routers, each with an attached PE (nocpe=false hides them).
+  % Routers: (<name>-n<r>-<c>), PEs: (<name>-pe<r>-<c>)
+  pics/noc/.default={},
+  pics/noc/.style={code={\hwset{#1}%
+    \pgfmathtruncatemacro\hwR{\hw@v{rows}}\pgfmathtruncatemacro\hwC{\hw@v{cols}}%
+    \edef\hw@tmp{\hw@v{nocpe}}%
+    \foreach \r in {1,...,\hwR}{\foreach \c in {1,...,\hwC}{%
+      \node[router,minimum size=0.6cm] (-n\r-\c) at ({(\c-1)*1.3},{-(\r-1)*1.3}) {R};
+      \ifx\hw@tmp\hw@true
+        \node[pe,minimum size=0.42cm,font=\tiny] (-pe\r-\c) at ({(\c-1)*1.3+0.52},{-(\r-1)*1.3+0.47}) {PE};
+        \draw[hwcwire] (-n\r-\c.north east) -- (-pe\r-\c.south west);
+      \fi}}%
+    \foreach \r in {1,...,\hwR}{\foreach \c in {1,...,\hwC}{%
+      \ifnum\c<\hwC \draw[hwwire,{Latex[length=1.2mm]}-{Latex[length=1.2mm]}] ({(\c-1)*1.3+0.32},{-(\r-1)*1.3})--({\c*1.3-0.32},{-(\r-1)*1.3});\fi
+      \ifnum\r<\hwR \draw[hwwire,{Latex[length=1.2mm]}-{Latex[length=1.2mm]}] ({(\c-1)*1.3},{-(\r-1)*1.3-0.32})--({(\c-1)*1.3},{-\r*1.3+0.32});\fi}}%
+  }},
+  % pic{legend}: key of role swatches, spaced by label width.
+  %   \pic at (x,y) {legend={legend={comp/Compute,mem/BRAM}}};
+  % roles: io comp quant const op mem ctrl group
+  swatch/.style={draw=hw#1D,fill=hw#1F,minimum width=0.32cm,minimum height=0.24cm,inner sep=0pt},
+  pics/legend/.default={},
+  pics/legend/.style={code={\hwset{#1}%
+    \edef\hwleg{\hw@v{legend}}%
+    \coordinate (-lg0) at (-0.4,0);
+    \foreach \st/\tx [count=\i] in \hwleg {%
+      \pgfmathtruncatemacro\ip{\i-1}%
+      \node[swatch=\st,anchor=west] (-sw\i) at ($(-lg\ip.east)+(0.4,0)$) {};
+      \node[anchor=west,font=\scriptsize,inner sep=2pt] (-lg\i) at (-sw\i.east) {\tx};}}},
+}
+\endinput

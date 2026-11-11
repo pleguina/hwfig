@@ -1,0 +1,30 @@
+% Two requantisation alternatives from one wide accumulator:
+% multiplier-free power-of-two shift vs. fixed-point multiply + shift.
+\documentclass[tikz,border=6pt]{standalone}
+\usepackage{amsmath}
+\usepackage{hwfig}
+\begin{document}
+\begin{tikzpicture}[hw]
+  \node[mem,minimum width=1.3cm] (acc) at (0,0) {acc\\[-2pt]{\scriptsize wide}};
+  \coordinate (fork) at (1.1,0);
+  \node[qbox,minimum width=2.4cm] (rs) at (3.3,0.9) {$+\,2^{S-1}$,\ $\gg S$};
+  \node[qbox] (st) at (6.1,0.9) {ReLU, sat8};
+  \node[runtime] (ot) at (8.0,0.9) {$q$};
+  \node[ctime] (sc) at (3.3,1.9) {$S=\lfloor-\log_2 c\rceil$};
+  \node[dsp,minimum width=1cm,minimum height=0.7cm] (mul) at (2.0,-0.9) {$\times c_{\mathrm{fp}}$};
+  \node[qbox,minimum width=1.7cm] (rm) at (3.95,-0.9) {$+\,2^{M-1}$,\ $\gg M$};
+  \node[qbox] (sb) at (6.1,-0.9) {ReLU, sat8};
+  \node[runtime] (ob) at (8.0,-0.9) {$q$};
+  \node[ctime] (cf) at (2.0,-1.9) {$c_{\mathrm{fp}}=\lfloor c\,2^{M}\rceil$};
+  \draw[arr] (-1.5,0) -- (acc) node[lbl,midway,above]{MAC};
+  \draw[hwwire] (acc) -- (fork); \fill[hwwire] (fork) circle (1.3pt);
+  \draw[hot] (fork) |- (rs.west);
+  \draw[hot] (rs) -- (st); \draw[hot] (st) -- (ot) node[lbl,midway,above]{INT8};
+  \draw[darr] (sc) -- (rs);
+  \draw[arr] (fork) |- (mul.west); \draw[arr] (mul) -- (rm); \draw[arr] (rm) -- (sb);
+  \draw[arr] (sb) -- (ob) node[lbl,midway,above]{INT8};
+  \draw[darr] (cf) -- (mul);
+  \node[grouplabel,anchor=west] at (4.9,1.9) {power-of-two: no multiplier};
+  \node[grouplabel,anchor=west] at (3.4,-1.9) {fixed-point rescale};
+\end{tikzpicture}
+\end{document}

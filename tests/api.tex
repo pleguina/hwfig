@@ -1,0 +1,36 @@
+% API regression test: package option, custom palette, per-pic options,
+% new styles, IEEEtran + hyperref compatibility.
+\documentclass[conference]{IEEEtran}
+\usepackage{amsmath}
+\usepackage[palette=okabe]{hwfig}
+\usepackage{hyperref}
+\hwdefinepalette{mine}{%
+  \hwrole{io}{black}{white}\hwrole{comp}{teal}{teal!12}\hwrole{quant}{orange!80!black}{orange!15}%
+  \hwrole{const}{black!55}{black!4}\hwrole{op}{red!70!black}{red!10}\hwrole{mem}{blue!60!black}{blue!10}%
+  \hwrole{ctrl}{violet}{violet!10}\hwrole{group}{teal!40}{teal!3}%
+  \hwwires{black}{black!50}{red!70!black}}
+\begin{document}
+\section{Test}
+Package option palette (okabe expected):\par
+\begin{tikzpicture}[hw]
+  \node[hlsbox] (a) at (0,0) {kernel};
+  \node[demux] (d) at (1.6,0) {};
+  \node[qbox] (q1) at (3,0.6) {$Q_1$};
+  \node[qbox] (q2) at (3,-0.6) {$Q_2$};
+  \draw[arr] (a)--(d);
+  \draw[arr] ($(d.east)+(0,0.3)$) -- ++(0.3,0) |- (q1);
+  \draw[arr] ($(d.east)+(0,-0.3)$) -- ++(0.3,0) |- (q2);
+  \draw[bus] (0,-1.2) -- (0,-2.2) pic[pos=.5]{buswidth'=128};
+  \draw[arr] (-0.5,-1.6) -- (1,-1.6) node[lblbox,midway]{AXI};
+\end{tikzpicture}
+
+Custom palette + per-pic options, two pics with different sizes in one picture:\par
+\begin{tikzpicture}[hw]
+  \hwpalette{mine}
+  \pic (A) at (0,0) {aiearray={rows=1,cols=2,tilelabel=K}};
+  \pic (B) at (3,0) {aiearray={rows=2,cols=2}};
+  \pic (N) at (0,-2.5) {noc={rows=1,cols=3,nocpe=false}};
+  \pic (P) at (0,-4) {pipeline={labels={IF,EX,WB}}};
+  \pic at (0,-5.3) {legend={legend={comp/Kernel,mem/Buffer}}};
+\end{tikzpicture}
+\end{document}
