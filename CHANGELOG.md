@@ -1,5 +1,34 @@
 # Changelog
 
+## v1.2 — 2026-11-15
+
+Existing figures render unchanged (same defaults); everything below is opt-in.
+
+### Added
+- Palettes: `ngt` and `ngtdark` (logo colours of CERN's Next Generation
+  Triggers project), `ngtblue` and `ngtnight` (navy / teal / amber of the NGT
+  title slides), `cern`, `ibm`, `bright` (Paul Tol bright).
+- Dark palettes: `\hwink{<text>}{<paper>}` and the `hwcanvas` picture style.
+- Shape themes: `\hwshape{classic|soft|round|pill|sharp}`.
+- Fill modes: `\hwfill{tint|solid|outline}`.
+- Fonts and line weight: `\hwfont{serif|sans|mono|<commands>}`,
+  `\hwline{thin|normal|bold|<length>}`; `\hwshadow` for drop shadows.
+- `\hwsetup{palette=,shape=,fill=,font=,line=,shadow}`; the same keys work
+  as package options, e.g. `\usepackage[ngt,shape=round,font=sans]{hwfig}`.
+- Node styles: `term`, `decision`, `state`, `accstate`, `buf`, `net`,
+  `neuron`, `dot`, `badge`, `note`, and `stack` (N copies of a block).
+- Wire styles: `biarr`, `ctlarr`, `link`, `brace`, `brace'`.
+- Pic: `mlp` (fully connected network).
+- Layout check (`check` option): warns about overlapping boxes, labels on
+  boxes, wires through boxes and wires too short for their arrow tip.
+- Role colours `hw<role>B/T/L` (box fill, box text, detail lines) derived
+  from the fill mode; `hw<role>D/F` keep their meaning.
+
+### Changed
+- `bus`, `hot`, `uram` and the `buswidth` tick scale with `\hwline`.
+- `lblbox` and `cdc` use the palette's paper colour instead of white.
+- An unknown shape theme or fill mode is a hard error, like an unknown palette.
+
 ## v1.1 — 2026-11-11
 
 ### Fixed

@@ -15,8 +15,8 @@ Package option palette (okabe expected):\par
 \begin{tikzpicture}[hw]
   \node[hlsbox] (a) at (0,0) {kernel};
   \node[demux] (d) at (1.6,0) {};
-  \node[qbox] (q1) at (3,0.6) {$Q_1$};
-  \node[qbox] (q2) at (3,-0.6) {$Q_2$};
+  \node[qbox] (q1) at (3.2,0.6) {$Q_1$};
+  \node[qbox] (q2) at (3.2,-0.6) {$Q_2$};
   \draw[arr] (a)--(d);
   \draw[arr] ($(d.east)+(0,0.3)$) -- ++(0.3,0) |- (q1);
   \draw[arr] ($(d.east)+(0,-0.3)$) -- ++(0.3,0) |- (q2);
@@ -33,4 +33,31 @@ Custom palette + per-pic options, two pics with different sizes in one picture:\
   \pic (P) at (0,-4) {pipeline={labels={IF,EX,WB}}};
   \pic at (0,-5.3) {legend={legend={comp/Kernel,mem/Buffer}}};
 \end{tikzpicture}
+
+v1.2: \verb|\hwsetup|, themes, new shapes, custom palette with \verb|\hwink|:\par
+\hwdefinepalette{night}{%
+  \hwink{white}{black!85}%
+  \hwrole{io}{white}{black!70}\hwrole{comp}{cyan}{cyan!20!black}\hwrole{quant}{yellow}{yellow!20!black}%
+  \hwrole{const}{white!60!black}{black!80}\hwrole{op}{red!60}{red!25!black}\hwrole{mem}{green}{green!20!black}%
+  \hwrole{ctrl}{magenta!70}{magenta!25!black}\hwrole{group}{white!50!black}{black!80}%
+  \hwwires{white}{white!60!black}{yellow}}
+\begin{tikzpicture}[hw,hwcanvas]
+  \hwsetup{palette=night,shape=pill,fill=solid,font=sans,line=bold,shadow}
+  \node[term] (t) at (0,0) {in};
+  \node[hlsbox,stack,minimum width=1.2cm] (k) at (1.9,0) {K};
+  \node[decision] (d) at (3.9,0) {ok?};
+  \node[state] (s) at (5.4,0) {S0};
+  \node[accstate] (a) at (6.7,0) {S1};
+  \draw[link] (t)--(k); \draw[biarr] (k)--(d); \draw[ctlarr] (d)--(s); \draw[arr] (s)--(a);
+  \node[buf] at (0,-1.2) {}; \node[net] at (2,-1.2) {net}; \node[badge] at (3.6,-1.2) {1};
+  \node[note] at (4.8,-1.2) {note}; \node[dot] at (5.6,-1.2) {};
+  \draw[brace] (6,-1.3)--(7,-1.3); \draw[brace'] (6,-1.1)--(7,-1.1);
+  \pic (M) at (0,-3) {mlp={layers={2,3,1}}};
+  \pic (M1) at (4,-3) {mlp={layers={3}}};
+  \draw[arr] (M-l3-1) -- (M1-l1-2);
+\end{tikzpicture}
+
+\hwsetup{palette=okabe,shape=classic,fill=tint,font=serif,line=normal,shadow=false}
+\hwfont{\sffamily\itshape}\hwline{0.6pt}\hwshadow\hwshadow[false]
+\begin{tikzpicture}[hw]\node[runtime]{$x$};\end{tikzpicture}
 \end{document}

@@ -1,0 +1,8 @@
+% Style catalogue in the palettes added in v1.2.
+\documentclass[tikz,border=8pt]{standalone}
+\usepackage{hwfig}
+\input{catalogue.inc}
+\begin{document}
+\foreach \pal in {bright,ibm,cern,ngt,ngtdark,ngtblue,ngtnight}{%
+\hwpalette{\pal}\catalogue}
+\end{document}

@@ -1,0 +1,19 @@
+% Every palette x shape theme x fill mode must compile (and \hwsetup with a
+% bare palette name must work as a package option).
+\documentclass{article}
+\usepackage[ngt,shape=round,font=sans]{hwfig}
+\begin{document}
+\foreach \pal in {grey,okabe,tol,bright,ibm,nord,slate,cern,ngt,ngtdark,ngtblue,ngtnight}{%
+\foreach \shp in {classic,soft,round,pill,sharp}{%
+\foreach \fil in {tint,solid,outline}{%
+\hwpalette{\pal}\hwshape{\shp}\hwfill{\fil}%
+\begin{tikzpicture}[hw,hwcanvas,scale=0.5]
+  \node[runtime] (a) at (0,0) {a}; \node[ctime] (b) at (2,1) {b}; \node[hlsbox,stack] (c) at (2,0) {c};
+  \node[qbox] (d) at (5,0) {d}; \node[op] (e) at (7,0) {$+$}; \node[mux] at (8,0) {}; \node[mem] at (10,0) {m};
+  \node[fifo] at (0,-2) {f}; \node[reg] at (2,-2) {}; \node[cpu] at (4,-2) {c}; \node[extmem] at (7,-2) {D};
+  \node[dsp] at (9,-2) {x}; \node[aie] at (11,-2) {A}; \node[term] at (0,-4) {t}; \node[decision] at (3,-4) {d};
+  \node[accstate] at (6,-4) {s}; \node[buf] at (8,-4) {}; \node[net] at (10,-4) {n};
+  \draw[arr] (a)--(c); \draw[darr] (b)--(c); \draw[hot] (c)--(d); \draw[bus] (d)--(e) pic[pos=.5]{buswidth=8};
+  \begin{scope}[on background layer]\node[group,fit=(a)(c)]{};\node[psregion,fit=(d)]{};\node[clkdomain,fit=(e)]{};\end{scope}
+\end{tikzpicture}\par}}}
+\end{document}

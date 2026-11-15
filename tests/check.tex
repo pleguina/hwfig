@@ -1,0 +1,26 @@
+% The layout check must flag each of these on purpose-broken layouts
+% and stay silent on the clean picture.
+\documentclass{article}
+\usepackage[check]{hwfig}
+\begin{document}
+\begin{tikzpicture}[hw]
+  \node[hlsbox] (a) at (0,0) {A};
+  \node[qbox] (b) at (1.2,0.2) {B};                 % overlaps a
+  \node[mem] (c) at (4,0) {C};
+  \node[hlsbox] (d) at (7,0) {D};
+  \draw[arr] (a.south) |- (5,-1) -| (d.south);
+  \draw[arr] (b.north) -- ++(0,0.6) -| (7,1) -- (d.north);
+  \draw[bus] (-2,0) -- (c.west|-0,0.1) -- (8.5,0.1);  % runs through boxes
+  \draw[arr] (c.south) -- ++(0,-0.6) node[lbl,pos=0.1,right=-8pt]{AXI}; % label on c
+  \draw[arr] (9,0) -- (9.15,0);                      % shorter than its tip
+  \draw[arr] (9,-1) -- (10,-1) -- (10,-0.95);        % bends inside the tip
+  \node[hlsbox,nocheck] at (0,0.1) {exempt};
+\end{tikzpicture}
+
+\begin{tikzpicture}[hw]
+  \node[runtime] (x) at (0,0) {$x$}; \node[hlsbox] (k) at (2.2,0) {MAC}; \node[op] (s) at (4,0) {$+$};
+  \node[ctime] (w) at (2.2,1.1) {$W$};
+  \draw[arr] (x)--(k) node[lbl,midway,above]{in}; \draw[hot] (k)--(s); \draw[darr] (w)--(k);
+  \draw[arr] (x.south) -- ++(0,-0.6) -| (s.south);
+\end{tikzpicture}
+\end{document}
