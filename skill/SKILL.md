@@ -3,22 +3,31 @@ name: "tikz-hardware-figures"
 description: "Draw publication-quality hardware/FPGA/dataflow block diagrams in TikZ (HLS kernels, AIE arrays, systolic arrays, SoCs, pipelines) in greyscale or colour-blind-safe palettes."
 ---
 
-# TikZ hardware figures (`hwfig` v1.1)
+# TikZ hardware figures (`hwfig` v1.2)
 
 Use this skill whenever the user wants a hardware figure in LaTeX/TikZ: dataflow of an HLS/FPGA kernel, a quantised NN layer, a Versal/Zynq SoC block diagram, AI Engine arrays, systolic arrays, adder trees, pipelines, NoCs, memory hierarchies, clock domains, floorplans. Output is always **editable TikZ source** plus a compiled PDF/PNG preview.
 
 ## Workflow
 
-1. **Get the package.** Copy `hwfig.sty` from this skill's base directory into the working directory (unless the user already has a copy — if theirs has no `v1.1` in its `\ProvidesPackage` line, offer to update it). Read the file and copy it byte-for-byte; never retype it or hand-redefine the styles inline — the palettes only work through the role colours.
+1. **Get the package.** Copy `hwfig.sty` from this skill's base directory into the working directory (unless the user already has a copy — if theirs has no `v1.2` in its `\ProvidesPackage` line, offer to update it). Read the file and copy it byte-for-byte; never retype it or hand-redefine the styles inline — the palettes only work through the role colours.
 2. **Pick a palette** (default `grey`), either as a package option `\usepackage[okabe]{hwfig}` or with `\hwpalette{...}` anywhere (group-local, so per figure):
    - `grey` — print / journal default, mirrors the reference template (white compute boxes, grey quantisers, dashed grey constants).
    - `okabe` — Okabe–Ito, colour-blind safe, strongest contrast. Good default for colour papers.
    - `tol` — Paul Tol *muted*, colour-blind safe, softer.
+   - `bright` — Paul Tol *bright*, colour-blind safe, more saturated.
+   - `ibm` — IBM design palette, colour-blind safe.
    - `nord` — cool tones, for slides.
    - `slate` — blue-grey + mauve + coral, matches scientific slide decks.
+   - `cern` — CERN blue with an orange accent.
+   - `ngt` — logo colours of CERN's Next Generation Triggers project (sky blue, yellow, red, green, purple on slate). Use it when the user mentions NGT.
+   - `ngtdark` — `ngt` on near-black for slides; the picture needs `[hw,hwcanvas]`.
+   - `ngtblue` — navy / teal / amber of the NGT title slides, on white; calmer than `ngt`, good for papers acknowledging NGT.
+   - `ngtnight` — the same hues on the slides' navy background; needs `[hw,hwcanvas]`.
    If the user does not say, produce `grey` and offer one colour palette; to compare, compile the same figure in several palettes (loop `\foreach \pal in {grey,okabe,...}{\hwpalette{\pal}...}` inside a `standalone` doc gives one page each). An unknown palette name is a hard error.
+   Then **pick a look** if the user wants something other than the classic paper style (see *Look* below): papers → defaults; slides and posters → `\hwsetup{shape=round,font=sans}` plus `fill=solid` for a bolder look.
 3. **Sketch the layout on a grid first** (explicit `at (x,y)` coordinates, ~2.4 cm column pitch, ±1.4 cm rows), then wire. Explicit coordinates beat `positioning` for dense dataflow figures.
-4. **Compile** as `\documentclass[tikz,border=4pt]{standalone}` + `\usepackage{hwfig}` with `pdflatex -interaction=batchmode -halt-on-error` (under a timeout; `nonstopmode` can hang), rasterise with `pdftoppm -r 110 -png`, **look at the PNG**, and fix overlaps (labels on wires, wires crossing boxes, titles colliding, frame labels touching nodes) before delivering. Iterate until clean.
+4. **Compile with the layout check on**: `\documentclass[tikz,border=4pt]{standalone}` + `\usepackage[check]{hwfig}`, `pdflatex -interaction=batchmode -halt-on-error` (under a timeout; `nonstopmode` can hang). Then `grep -A1 "hwfig Warning: check\|hwfig check:" file.log`. The check reports overlapping boxes, wire labels on boxes, wires running through boxes, and wires too short (or bending too late) for their arrow tip, and marks each spot in red in the PDF. **Fix the layout until every picture reports `0 problem(s)`** — move nodes or reroute; use `nocheck` on a node only when the overlap is intended (a box drawn inside another box).
+   Then rasterise with `pdftoppm -r 110 -png` and **look at the PNG** for what the check cannot see: wires crossing or sharing a level, labels on wires or frame borders, frame titles touching nodes, crowding. Iterate until clean, then remove `check` and recompile for the delivered PDF.
 5. **Deliver** the `.tex` (figure body ready to paste into a paper), the `.sty`, and the PDF. Remind the user that in their paper they need `\usepackage{hwfig}` (or `\usepackage[<palette>]{hwfig}`).
 
 ## Visual grammar (keep it consistent)
@@ -42,6 +51,25 @@ Use this skill whenever the user wants a hardware figure in LaTeX/TikZ: dataflow
 - **Labels sit on free segments only.** Put `lbl`/`buswidth` on a segment that lies entirely in empty space — never where the wire crosses a frame border, and never within ~0.2 cm of a block. If the only free stretch is vertical, rotate the label to read bottom-to-top: `node[lbl,rotate=90,below]{AXI4-S}`. On short links use `pic[pos=.35..0.4]` so the number clears the destination block.
 - **Explicit segments for labelled elbows.** `-|`/`|-` can't take a label on a chosen leg; write the corners out: `(a.east) -- (\chan,ya) -- node[lbl,...]{X} (\chan,\lvla) -- (b.south|-{(0,\lvla)}) -- (b.south);`
 - Math in labels: `$W_{\mathrm{root}}$`; two-line labels with `\\` (all styles set `align=center`).
+
+## Look: shape, fill, font, line weight
+
+Independent of the palette, group-local, and never hand-rolled with `rounded corners` or `\sffamily` on single nodes — set the theme instead:
+
+```latex
+\usepackage[ngt,shape=round,font=sans]{hwfig}            % package options
+\hwsetup{palette=ngtdark,shape=pill,fill=solid,line=bold,shadow}   % or anywhere
+```
+
+| command | values |
+|---|---|
+| `\hwshape{..}` | `classic` (default: square kernels, rounded ports), `soft`, `round`, `pill` (pill-shaped ports), `sharp` |
+| `\hwfill{..}` | `tint` (default), `solid` (saturated boxes, paper-coloured text; io/const/frames stay light), `outline` |
+| `\hwfont{..}` | `serif`, `sans`, `mono`, or font commands (`\hwfont{\sffamily\sansmath}` needs the `sansmath` package for sans maths) |
+| `\hwline{..}` | `thin`, `normal`, `bold`, or a length |
+| `\hwshadow`, `\hwshadow[false]` | soft drop shadow under boxes (slides only) |
+
+Inside a `tikzpicture` put `\hwsetup` first, before any node. Dark palettes: `\begin{tikzpicture}[hw,hwcanvas]` paints the background; text and label backings follow the palette (`hwtext`, `hwpaper`), so never hard-code `black`/`white` in a figure — for captions use `text=hwtext!70!hwpaper`.
 
 ## Node styles (all palette-aware)
 
@@ -67,10 +95,20 @@ Use this skill whenever the user wants a hardware figure in LaTeX/TikZ: dataflow
 | `chip` | package/die with pins |
 | `port` | small pin marker |
 | `cdc` | clock-domain-crossing synchroniser |
+| `term` | terminator / external endpoint (pill) |
+| `decision` | branch condition (diamond) |
+| `state`, `accstate` | FSM state, accepting/idle state (double circle) |
+| `buf` | buffer / driver / amplifier (triangle pointing east) |
+| `net` | network or anything outside the system (cloud) |
+| `neuron` | neural-network unit (see `mlp` pic) |
+| `stack` | modifier: N copies of a block — `\node[hlsbox,stack]{Link RX\\$\times 18$};` (leave 0.2 cm extra room top-right) |
+| `dot` | wire junction — `\node[dot] at (fork) {};` |
+| `badge` | numbered call-out in the accent colour — `\node[badge] at (..) {1};` |
+| `note` | free annotation text (italic, constant-wire colour) |
 | `group`, `plregion`, `psregion`, `clkdomain` | background frames |
-| `grouplabel`, `lbl`, `lblbox` | frame titles, wire labels (`lblbox` = white backing) |
+| `grouplabel`, `lbl`, `lblbox` | frame titles, wire labels (`lblbox` = paper-coloured backing) |
 
-Edge styles: `arr`, `darr`, `bus`, `hot`. Bus tick: `pic[pos=.5]{buswidth=32}` (number right of the tick) or `buswidth'=32` (left).
+Edge styles: `arr`, `darr`, `bus`, `hot`, `biarr` (bidirectional), `ctlarr` (control / handshake, ctrl colour, dashed), `link` (serial / optical link, double line). Dimension brace: `\draw[brace] (a.north west) -- (a.north east) node[lbl,midway,above=5pt]{8 bit};` (`brace'` mirrors it). Bus tick: `pic[pos=.5]{buswidth=32}` (number right of the tick) or `buswidth'=32` (left).
 
 ## Parametric pics
 
@@ -85,6 +123,7 @@ Pass options per pic — they stay local to that pic, so different sizes can sha
 | `pipeline` | `labels={Load,MAC,Requant,...}` | stages `(n-st<k>)`, regs `(n-r<k>)` |
 | `noc` | `rows, cols, nocpe` (true/false) | routers `(n-n<r>-<c>)`, PEs `(n-pe<r>-<c>)` |
 | `fabric` | `columns={I,C,C,D,C,B,...}`, `fabricrows` (any value) | column tops `(n-c<k>)`. C=CLB D=DSP B=BRAM U=URAM I=IO |
+| `mlp` | `layers={3,5,5,2}`, `lsep` (x pitch, 1.3), `nsep` (y pitch, 0.5) | units `(n-l<layer>-<k>)` (k=1 top) |
 | `legend` | `legend={comp/Compute,mem/BRAM,...}` (roles: io comp quant const op mem ctrl group); auto-spaced | — |
 
 Route wires *around* pics (e.g. into shim tiles from below: `(k1.east) -- ++(0.9,0) |- ($(arr-s1.south)+(0,-0.35)$) -- (arr-s1.south)`), never through tiles.
@@ -102,7 +141,15 @@ No `@` internals needed — set all 8 roles (draw, fill) and the three wire colo
 \hwpalette{mine}
 ```
 
-Keep fills ≤ 25% tint so black text stays readable, and check the greyscale conversion still separates roles.
+Keep fills ≤ 25% tint so black text stays readable, and check the greyscale conversion still separates roles. A dark palette adds `\hwink{<text>}{<paper>}` inside the definition and mixes its tints into the paper colour (`cyan!20!black`), not into white.
+
+## Keep shapes sane
+
+- Density: ≤ ~12 boxes per row-pair and ≥ 0.5 cm clear space between neighbouring boxes; split a crowded figure into two rather than shrinking it.
+- Every arrow's last straight segment is ≥ 0.4 cm, and every wire ≥ 0.4 cm long; never let an elbow turn right at the destination.
+- Use only the package styles and themes for shapes. No ad-hoc `rounded corners`, `scale`, `xscale`/`yscale`, `rotate` (except labels by 90°) or `shape=` on nodes, and no `bend`/`out`/`in` curves on wires — route with straight and elbow segments.
+- Keep text short enough for its shape: `decision`, `state`, `op`, `neuron`, `buf` take one or two short words (or nothing); longer text goes in an `hlsbox`/`ctrl` or a `note` beside it.
+- Don't override `minimum width`/`height` below the style's default; boxes grow with their text on their own.
 
 ## Pitfalls
 
@@ -112,6 +159,8 @@ Keep fills ≤ 25% tint so black text stays readable, and check the greyscale co
 - For an extra line inside a node use a plain node with `align=center` and `\\[-2pt]{\tiny ...}` — don't overlay a second label on the box.
 - `shapes.geometric` `trapezium` with empty text divides by zero — that is why `mux`/`demux` are custom path pictures; don't swap them back.
 - Inside `\foreach`, use `\pgfmathtruncatemacro` for integer arithmetic before using values in node names; in `\foreach \a/\b in {...}` a `/` inside the label text splits it (write `Port`, not `I/O`).
+- Frames (`group`, `clkdomain`, …) go on the `background` layer; `hwcanvas` paints on its own layer below it. Don't call `\pgfsetlayers` without keeping `hwcanvas,background,main`.
+- `fill=solid` with the `grey` palette gives black boxes — pair `solid` with a colour palette.
 - `clkdomain` has a light fill; pass `fill=none` when drawing it over a `fabric` or other dense content.
 - MiKTeX ignores POSIX-style `TEXINPUTS`; keep `hwfig.sty` next to the `.tex` (or pass `--include-directory=<windows path>`).
 - Keep figures ≤ ~16 cm wide for a two-column paper at `\footnotesize`; scale with `\resizebox{\linewidth}{!}{...}` only as a last resort.
@@ -201,4 +250,4 @@ Keep fills ≤ 25% tint so black text stays readable, and check the greyscale co
 
 ## Package source
 
-`hwfig.sty` (v1.1, by Pelayo Leguina, <pelayo.leguina.lopez@cern.ch>, LPPL 1.3c) ships next to this file. Changelog, gallery and examples live in the public `hwfig` repository; this skill is maintained there under `skill/` and packaged with `skill/package.sh`.
+`hwfig.sty` (v1.2, by Pelayo Leguina, <pelayo.leguina.lopez@cern.ch>, LPPL 1.3c) ships next to this file. Changelog, gallery and examples live in the public `hwfig` repository; this skill is maintained there under `skill/` and packaged with `skill/package.sh`.

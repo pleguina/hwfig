@@ -4,39 +4,112 @@
 % LaTeX Project Public License, version 1.3c or later
 % (https://www.latex-project.org/lppl.txt).  Maintenance status: maintained.
 %
-% Usage:  \usepackage{hwfig}            % grey palette
-%         \usepackage[okabe]{hwfig}     % or palette=okabe
-%         \hwpalette{grey|okabe|tol|nord|slate}   % switch anywhere (group-local)
+% Usage:  \usepackage{hwfig}                       % grey palette, classic look
+%         \usepackage[okabe]{hwfig}                % or palette=okabe
+%         \usepackage[ngt,shape=round,font=sans]{hwfig}
+%         \hwpalette{grey|okabe|tol|bright|ibm|nord|slate|cern|
+%                     ngt|ngtdark|ngtblue|ngtnight}
+%         \hwshape{classic|soft|round|pill|sharp}  \hwfill{tint|solid|outline}
+%         \hwfont{serif|sans|mono}                 \hwline{thin|normal|bold}
+%         \hwsetup{palette=ngt,shape=round,fill=solid,font=sans,line=bold,shadow}
+%         \usepackage[check]{hwfig}   % warn about overlaps and bad wires
+%   All of these are group-local, so they can differ per figure.
 \NeedsTeXFormat{LaTeX2e}
-\ProvidesPackage{hwfig}[2026/11/11 v1.1 hardware figure styles]
+\ProvidesPackage{hwfig}[2026/11/15 v1.2 hardware figure styles]
 \RequirePackage{xcolor}
 \RequirePackage{tikz}
-\usetikzlibrary{arrows.meta,positioning,fit,backgrounds,calc,shapes.geometric,decorations.markings}
+\usetikzlibrary{arrows.meta,positioning,fit,backgrounds,calc,shapes.geometric,
+  shapes.misc,shapes.symbols,shadows,decorations.markings,decorations.pathreplacing}
+\pgfdeclarelayer{hwcanvas}\pgfsetlayers{hwcanvas,background,main}
 
-% ---- options: \usepackage[<palette>]{hwfig} or [palette=<palette>] ----------
-\def\hw@initpal{grey}
-\def\hw@setopt#1=#2\@nil{\def\hw@tmp{#2}%
-  \ifx\hw@tmp\@empty\edef\hw@initpal{#1}\else\hw@setopt@b#2\@nil\fi}
-\def\hw@setopt@b#1=\@nil{\edef\hw@initpal{#1}}
-\DeclareOption*{\expandafter\hw@setopt\CurrentOption=\@nil}
+% ---- options: collected here, applied once everything is defined ------------
+\def\hw@opts{}
+\DeclareOption*{\edef\hw@opts{\hw@opts,\CurrentOption}}
 \ProcessOptions\relax
 
-% ---- role colours: <role>D = draw, <role>F = fill --------------------------
+% ---- role colours ----------------------------------------------------------
+% Each role <r> in {io comp quant const op mem ctrl group} owns
+%   hw<r>D  draw colour          hw<r>F  tint (palette-given, never altered)
+%   hw<r>B  box fill             hw<r>T  box text       hw<r>L  detail lines
+% B/T/L are derived from D/F by the fill mode (\hwfill).
 % Public API for custom palettes:
 %   \hwdefinepalette{mine}{%
-%     \hwrole{io}{black}{white} \hwrole{comp}{blue}{blue!10} ...   (8 roles:
-%       io comp quant const op mem ctrl group)
-%     \hwwires{<wire>}{<constant wire>}{<accent / hot path>}}
+%     \hwrole{io}{black}{white} \hwrole{comp}{blue}{blue!10} ...   (8 roles)
+%     \hwwires{<wire>}{<constant wire>}{<accent / hot path>}
+%     \hwink{<text>}{<paper>}}      % optional, default black on white
 \newcommand\hw@role[3]{\colorlet{hw#1D}{#2}\colorlet{hw#1F}{#3}}
 \newcommand\hwrole[3]{\hw@role{#1}{#2}{#3}}
 \newcommand\hwwires[3]{\colorlet{hwwire}{#1}\colorlet{hwcwire}{#2}\colorlet{hwaccent}{#3}}
+\newcommand\hwink[2]{\colorlet{hwtext}{#1}\colorlet{hwpaper}{#2}}
 \newcommand\hwdefinepalette[2]{\expandafter\def\csname hw@pal@#1\endcsname{#2}}
 
+\def\hw@roles{io,comp,quant,const,op,mem,ctrl,group}
+\def\hw@fillmode{tint}
+\def\hw@solid{solid}
+\def\hw@btl@tint#1{\colorlet{hw#1B}{hw#1F}\colorlet{hw#1T}{hwtext}\colorlet{hw#1L}{hw#1D}}
+\def\hw@btl@solid#1{\colorlet{hw#1B}{hw#1D}\colorlet{hw#1T}{hwpaper}\colorlet{hw#1L}{hwpaper}}
+\def\hw@btl@outline#1{\colorlet{hw#1B}{hwpaper}}
+\def\hw@each#1#2{\@for\hw@r:=#2\do{\expandafter#1\expandafter{\hw@r}}}
+\def\hw@fill@tint{}
+\def\hw@fill@solid{\hw@each\hw@btl@solid{comp,quant,op,mem,ctrl}}
+\def\hw@fill@outline{\hw@each\hw@btl@outline\hw@roles}
+\newcommand\hw@applyfill{\hw@each\hw@btl@tint\hw@roles\csname hw@fill@\hw@fillmode\endcsname}
+
 \newcommand\hwpalette[1]{%
-  \ifcsname hw@pal@#1\endcsname\csname hw@pal@#1\endcsname
+  \ifcsname hw@pal@#1\endcsname
+    \edef\hw@curpal{#1}\hwink{black}{white}%
+    \csname hw@pal@#1\endcsname\hw@applyfill
   \else\PackageError{hwfig}{Unknown palette `#1'}%
-    {Built-in palettes: grey, okabe, tol, nord, slate.\MessageBreak
-     Define your own with \string\hwdefinepalette.}\fi}
+    {Built-in palettes: grey, okabe, tol, bright, ibm, nord, slate,\MessageBreak
+     cern, ngt, ngtdark, ngtblue, ngtnight.  Define your own with \string\hwdefinepalette.}\fi}
+
+% ---- fill mode: tint (default) | solid (saturated boxes, paper-coloured
+%      text; io/const/group stay light) | outline (no fill) ------------------
+\newcommand\hwfill[1]{%
+  \ifcsname hw@fill@#1\endcsname\def\hw@fillmode{#1}\hw@applyfill
+  \else\PackageError{hwfig}{Unknown fill mode `#1'}{Use tint, solid or outline.}\fi}
+
+% ---- shape theme: corner radii and the port shape ---------------------------
+%   \hw@rcbox  compute / quant / memory boxes     \hw@rcio  ctrl, frames
+%   \hw@ioshape + \hw@rcport  runtime / ctime ports
+\def\hw@shape@classic{\def\hw@rcbox{0pt}\def\hw@rcio{4pt}\def\hw@rcport{4pt}\def\hw@ioshape{rectangle}}
+\def\hw@shape@sharp{\def\hw@rcbox{0pt}\def\hw@rcio{0pt}\def\hw@rcport{0pt}\def\hw@ioshape{rectangle}}
+\def\hw@shape@soft{\def\hw@rcbox{2pt}\def\hw@rcio{4pt}\def\hw@rcport{4pt}\def\hw@ioshape{rectangle}}
+\def\hw@shape@round{\def\hw@rcbox{4pt}\def\hw@rcio{6pt}\def\hw@rcport{6pt}\def\hw@ioshape{rectangle}}
+\def\hw@shape@pill{\def\hw@rcbox{3pt}\def\hw@rcio{5pt}\def\hw@rcport{0pt}\def\hw@ioshape{rounded rectangle}}
+\newcommand\hwshape[1]{%
+  \ifcsname hw@shape@#1\endcsname\csname hw@shape@#1\endcsname
+  \else\PackageError{hwfig}{Unknown shape theme `#1'}{Use classic, soft, round, pill or sharp.}\fi}
+\hw@shape@classic
+
+% ---- font family: serif | sans | mono | any font commands -------------------
+%   e.g. \hwfont{\sffamily\sansmath} with the sansmath package for sans maths
+\def\hw@font@serif{\rmfamily}\def\hw@font@sans{\sffamily}\def\hw@font@mono{\ttfamily}
+\def\hw@ff{}
+\newcommand\hwfont[1]{%
+  \ifcsname hw@font@\detokenize{#1}\endcsname
+    \expandafter\let\expandafter\hw@ff\csname hw@font@\detokenize{#1}\endcsname
+  \else\def\hw@ff{#1}\fi}
+
+% ---- line weight: thin | normal | bold | <dimension> ------------------------
+\def\hw@line@thin{0.35pt}\def\hw@line@normal{0.5pt}\def\hw@line@bold{0.8pt}
+\def\hw@lw{0.5pt}
+\newcommand\hwline[1]{%
+  \ifcsname hw@line@#1\endcsname\edef\hw@lw{\csname hw@line@#1\endcsname}\else\def\hw@lw{#1}\fi
+  \pgfsetlinewidth{\hw@lw}}
+
+% ---- soft drop shadow under boxes (slides) ----------------------------------
+\newif\ifhw@shadow
+\newcommand\hwshadow[1][true]{\csname hw@shadow#1\endcsname}
+
+% ---- one-stop setup; also the package options -------------------------------
+\pgfkeys{/hwsetup/.is family,/hwsetup/.cd,
+  palette/.code=\hwpalette{#1}, shape/.code=\hwshape{#1}, fill/.code=\hwfill{#1},
+  font/.code=\hwfont{#1}, line/.code=\hwline{#1},
+  shadow/.code=\hwshadow[#1], shadow/.default=true,
+  check/.code=\csname hw@check#1\endcsname, check/.default=true,
+  .unknown/.code={\edef\hw@tmp{\noexpand\hwpalette{\pgfkeyscurrentname}}\hw@tmp}}
+\newcommand\hwsetup[1]{\pgfkeys{/hwsetup/.cd,#1}}
 
 % Greyscale: print-safe, matches the original template
 \newcommand\hw@pal@grey{%
@@ -110,72 +183,184 @@
   \hw@role{group}{hwSslate!45}{hwSslate!3}%
   \colorlet{hwwire}{hwSslate!80!black}\colorlet{hwcwire}{hwSslate!60}\colorlet{hwaccent}{hwScoral}}
 
-\hwpalette{\hw@initpal}
+% Paul Tol "bright": colour-blind safe, more saturated than tol
+\definecolor{hwBblue}{HTML}{4477AA}\definecolor{hwBcyan}{HTML}{66CCEE}
+\definecolor{hwBgreen}{HTML}{228833}\definecolor{hwByellow}{HTML}{CCBB44}
+\definecolor{hwBred}{HTML}{EE6677}\definecolor{hwBpurple}{HTML}{AA3377}
+\newcommand\hw@pal@bright{%
+  \hw@role{io}{black!80}{white}%
+  \hw@role{comp}{hwBblue!90!black}{hwBcyan!22}%
+  \hw@role{quant}{hwByellow!60!black}{hwByellow!30}%
+  \hw@role{const}{black!55}{black!5}%
+  \hw@role{op}{hwBred!75!black}{hwBred!16}%
+  \hw@role{mem}{hwBgreen!90!black}{hwBgreen!16}%
+  \hw@role{ctrl}{hwBpurple!90!black}{hwBpurple!14}%
+  \hw@role{group}{hwBblue!45}{hwBcyan!6}%
+  \colorlet{hwwire}{black!85}\colorlet{hwcwire}{black!50}\colorlet{hwaccent}{hwBred!85!black}}
+
+% IBM design palette: colour-blind safe, blue / purple / magenta / orange
+\definecolor{hwIblue}{HTML}{648FFF}\definecolor{hwIpurple}{HTML}{785EF0}
+\definecolor{hwImagenta}{HTML}{DC267F}\definecolor{hwIorange}{HTML}{FE6100}
+\definecolor{hwIyellow}{HTML}{FFB000}
+\newcommand\hw@pal@ibm{%
+  \hw@role{io}{black!80}{white}%
+  \hw@role{comp}{hwIblue!75!black}{hwIblue!16}%
+  \hw@role{quant}{hwIyellow!62!black}{hwIyellow!24}%
+  \hw@role{const}{black!55}{black!5}%
+  \hw@role{op}{hwImagenta!85!black}{hwImagenta!11}%
+  \hw@role{mem}{hwIpurple!85!black}{hwIpurple!15}%
+  \hw@role{ctrl}{hwIorange!78!black}{hwIorange!15}%
+  \hw@role{group}{hwIblue!50}{hwIblue!5}%
+  \colorlet{hwwire}{black!85}\colorlet{hwcwire}{black!50}\colorlet{hwaccent}{hwImagenta}}
+
+% CERN: corporate blue with the orange accent of the CERN web theme
+\definecolor{hwCblue}{HTML}{0033A0}\definecolor{hwCblueB}{HTML}{4486E6}
+\definecolor{hwCblueC}{HTML}{8AAFEB}\definecolor{hwCorange}{HTML}{FD6109}
+\definecolor{hwCmint}{HTML}{224D53}\definecolor{hwCpurple}{HTML}{6E2466}
+\definecolor{hwCpink}{HTML}{D45BB5}\definecolor{hwCgrey}{HTML}{3D3D41}
+\newcommand\hw@pal@cern{%
+  \hw@role{io}{hwCgrey}{white}%
+  \hw@role{comp}{hwCblue}{hwCblueC!26}%
+  \hw@role{quant}{hwCorange!80!black}{hwCorange!16}%
+  \hw@role{const}{hwCgrey!60}{hwCgrey!5}%
+  \hw@role{op}{hwCpurple}{hwCpink!16}%
+  \hw@role{mem}{hwCmint}{hwCmint!15}%
+  \hw@role{ctrl}{hwCgrey}{hwCgrey!18}%
+  \hw@role{group}{hwCblue!40}{hwCblueC!8}%
+  \colorlet{hwwire}{hwCgrey}\colorlet{hwcwire}{hwCgrey!60}\colorlet{hwaccent}{hwCorange}}
+
+% NGT: the five logo colours of the CERN Next Generation Triggers project
+% (sky blue, yellow, red, green, purple) on its slate grey
+\definecolor{hwGsky}{HTML}{7DB7DB}\definecolor{hwGyellow}{HTML}{DBC533}
+\definecolor{hwGred}{HTML}{E15050}\definecolor{hwGgreen}{HTML}{95DC54}
+\definecolor{hwGpurple}{HTML}{9874DB}\definecolor{hwGslate}{HTML}{72858C}
+\definecolor{hwGgrey}{HTML}{BFBBBA}\definecolor{hwGink}{HTML}{151515}
+\newcommand\hw@pal@ngt{%
+  \hwink{hwGink}{white}%
+  \hw@role{io}{hwGslate!75!black}{white}%
+  \hw@role{comp}{hwGsky!62!black}{hwGsky!24}%
+  \hw@role{quant}{hwGyellow!62!black}{hwGyellow!28}%
+  \hw@role{const}{hwGslate}{hwGslate!8}%
+  \hw@role{op}{hwGred!82!black}{hwGred!15}%
+  \hw@role{mem}{hwGgreen!52!black}{hwGgreen!26}%
+  \hw@role{ctrl}{hwGpurple!80!black}{hwGpurple!18}%
+  \hw@role{group}{hwGslate!60}{hwGslate!5}%
+  \colorlet{hwwire}{hwGink!85}\colorlet{hwcwire}{hwGslate}\colorlet{hwaccent}{hwGred}}
+
+% NGT on the near-black of the project's slides and web pages.
+% Add [hwcanvas] to the picture to paint the background.
+\newcommand\hw@pal@ngtdark{%
+  \hwink{white!92!hwGink}{hwGink}%
+  \hw@role{io}{hwGgrey}{hwGslate!22!hwGink}%
+  \hw@role{comp}{hwGsky}{hwGsky!24!hwGink}%
+  \hw@role{quant}{hwGyellow}{hwGyellow!22!hwGink}%
+  \hw@role{const}{hwGslate!60!white}{hwGslate!14!hwGink}%
+  \hw@role{op}{hwGred!85!white}{hwGred!26!hwGink}%
+  \hw@role{mem}{hwGgreen}{hwGgreen!20!hwGink}%
+  \hw@role{ctrl}{hwGpurple!80!white}{hwGpurple!28!hwGink}%
+  \hw@role{group}{hwGslate}{hwGslate!9!hwGink}%
+  \colorlet{hwwire}{hwGgrey}\colorlet{hwcwire}{hwGslate!70!white}\colorlet{hwaccent}{hwGyellow}}
+
+% NGT slide theme: the navy -> teal -> amber gradient of the project's
+% title slides.  ngtblue is the light version for papers.
+\definecolor{hwGnavy}{HTML}{012267}\definecolor{hwGsteel}{HTML}{1F4773}
+\definecolor{hwGteal}{HTML}{2F5B75}\definecolor{hwGamber}{HTML}{C47F17}
+\definecolor{hwGbrown}{HTML}{755115}
+\newcommand\hw@pal@ngtblue{%
+  \hwink{hwGnavy!85!black}{white}%
+  \hw@role{io}{hwGnavy}{white}%
+  \hw@role{comp}{hwGnavy}{hwGnavy!11}%
+  \hw@role{quant}{hwGamber!85!black}{hwGamber!20}%
+  \hw@role{const}{hwGteal!75}{hwGteal!7}%
+  \hw@role{op}{hwGbrown}{hwGbrown!16}%
+  \hw@role{mem}{hwGteal}{hwGteal!20}%
+  \hw@role{ctrl}{hwGsteel!80}{hwGsteel!32}%
+  \hw@role{group}{hwGsteel!55}{hwGnavy!4}%
+  \colorlet{hwwire}{hwGnavy!90!black}\colorlet{hwcwire}{hwGteal!80}\colorlet{hwaccent}{hwGamber}}
+
+% ngtnight: the same hues on the slides' navy.  Add [hwcanvas] to the picture.
+\newcommand\hw@pal@ngtnight{%
+  \hwink{white}{hwGnavy}%
+  \hw@role{io}{white!85!hwGnavy}{hwGnavy!85!white}%
+  \hw@role{comp}{hwGsky!70!white}{hwGsky!26!hwGnavy}%
+  \hw@role{quant}{hwGamber!70!white}{hwGamber!38!hwGnavy}%
+  \hw@role{const}{white!55!hwGnavy}{hwGnavy!92!white}%
+  \hw@role{op}{hwGamber!45!white}{hwGbrown!70!hwGnavy}%
+  \hw@role{mem}{hwGteal!45!white}{hwGteal!75!hwGnavy}%
+  \hw@role{ctrl}{white!80!hwGnavy}{hwGsteel!60!white!45!hwGnavy}%
+  \hw@role{group}{white!40!hwGnavy}{hwGnavy!94!white}%
+  \colorlet{hwwire}{white!88!hwGnavy}\colorlet{hwcwire}{white!55!hwGnavy}\colorlet{hwaccent}{hwGamber!80!white}}
+
+\hwpalette{grey}
 
 % ---- styles ----------------------------------------------------------------
 \tikzset{
-  hw/.style={font=\footnotesize, line width=0.5pt, >={Latex[length=2mm]}},
+  hw/.style={font=\hw@ff\footnotesize, line width=\hw@lw, color=hwtext, >={Latex[length=2mm]}, hw@chk},
+  % internal: role colours + optional shadow; port shape of the current theme
+  hw@box/.style={draw=hw#1D,fill=hw#1B,text=hw#1T,hw@fx,hw@trk=b},
+  hw@fx/.code={\ifhw@shadow\tikzset{drop shadow={opacity=0.22,shadow xshift=1.3pt,shadow yshift=-1.3pt}}\fi},
+  hw@port/.code={\edef\hw@tmp{\noexpand\tikzset{shape=\hw@ioshape,rounded corners=\hw@rcport}}\hw@tmp},
   % run-time data / ports
-  runtime/.style={draw=hwioD,fill=hwioF,rounded corners,minimum height=0.6cm,align=center,inner sep=3pt},
+  runtime/.style={hw@box=io,hw@port,minimum height=0.6cm,align=center,inner sep=3pt},
   % compile-time constants (weights, scales, config)
-  ctime/.style={draw=hwconstD,fill=hwconstF,dashed,rounded corners,minimum height=0.5cm,align=center,inner sep=2pt,font=\footnotesize},
+  ctime/.style={hw@box=const,dashed,hw@port,minimum height=0.5cm,align=center,inner sep=2pt,font=\hw@ff\footnotesize},
   % compute kernel / HLS function / AIE kernel
-  hlsbox/.style={draw=hwcompD,fill=hwcompF,minimum height=0.8cm,minimum width=1.9cm,align=center,inner sep=3pt},
+  hlsbox/.style={hw@box=comp,rounded corners=\hw@rcbox,minimum height=0.8cm,minimum width=1.9cm,align=center,inner sep=3pt},
   % quantiser / requantise / saturate
-  qbox/.style={draw=hwquantD,fill=hwquantF,minimum height=0.7cm,minimum width=1.35cm,align=center,inner sep=2pt},
+  qbox/.style={hw@box=quant,rounded corners=\hw@rcbox,minimum height=0.7cm,minimum width=1.35cm,align=center,inner sep=2pt},
   % memory: BRAM/URAM/DDR buffer (double top/bottom rule)
-  mem/.style={draw=hwmemD,fill=hwmemF,minimum height=0.8cm,minimum width=1.6cm,align=center,inner sep=3pt,
-    path picture={\draw[hwmemD] ($(path picture bounding box.north west)+(0,-2pt)$)--($(path picture bounding box.north east)+(0,-2pt)$);
-                  \draw[hwmemD] ($(path picture bounding box.south west)+(0,2pt)$)--($(path picture bounding box.south east)+(0,2pt)$);}},
+  mem/.style={hw@box=mem,rounded corners=\hw@rcbox,minimum height=0.8cm,minimum width=1.6cm,align=center,inner sep=3pt,
+    path picture={\draw[hwmemL,sharp corners] ($(path picture bounding box.north west)+(0,-2pt)$)--($(path picture bounding box.north east)+(0,-2pt)$);
+                  \draw[hwmemL,sharp corners] ($(path picture bounding box.south west)+(0,2pt)$)--($(path picture bounding box.south east)+(0,2pt)$);}},
   % FIFO / stream: vertical slots on the right
-  fifo/.style={draw=hwmemD,fill=hwmemF,minimum height=0.6cm,minimum width=1.4cm,align=center,inner sep=2pt,
-    path picture={\foreach \k in {1,2,3}{\draw[hwmemD] ($(path picture bounding box.north east)+(-\k*3pt,0)$)--($(path picture bounding box.south east)+(-\k*3pt,0)$);}}},
+  fifo/.style={hw@box=mem,rounded corners=\hw@rcbox,minimum height=0.6cm,minimum width=1.4cm,align=center,inner sep=2pt,
+    path picture={\foreach \k in {1,2,3}{\draw[hwmemL,sharp corners] ($(path picture bounding box.north east)+(-\k*3pt,0)$)--($(path picture bounding box.south east)+(-\k*3pt,0)$);}}},
   % register with clock wedge
-  reg/.style={draw=hwmemD,fill=hwmemF,minimum height=0.7cm,minimum width=0.55cm,inner sep=1pt,
-    path picture={\draw[hwmemD] ($(path picture bounding box.south)+(-3pt,0)$)--($(path picture bounding box.south)+(0,4pt)$)--($(path picture bounding box.south)+(3pt,0)$);}},
+  reg/.style={hw@box=mem,rounded corners=\hw@rcbox,minimum height=0.7cm,minimum width=0.55cm,inner sep=1pt,
+    path picture={\draw[hwmemL,sharp corners] ($(path picture bounding box.south)+(-3pt,0)$)--($(path picture bounding box.south)+(0,4pt)$)--($(path picture bounding box.south)+(3pt,0)$);}},
   % control / FSM / scheduler
-  ctrl/.style={draw=hwctrlD,fill=hwctrlF,rounded corners=4pt,minimum height=0.7cm,minimum width=1.6cm,align=center,inner sep=3pt},
+  ctrl/.style={hw@box=ctrl,rounded corners=\hw@rcio,minimum height=0.7cm,minimum width=1.6cm,align=center,inner sep=3pt},
   % arithmetic operator (+, x, max)
-  op/.style={draw=hwopD,fill=hwopF,circle,minimum size=0.55cm,inner sep=0pt},
+  op/.style={hw@box=op,circle,minimum size=0.55cm,inner sep=0pt},
   % multiplexer (inputs on west, output on east)
-  mux/.style={minimum width=0.45cm,minimum height=1cm,inner sep=0pt,font=\scriptsize,
-    path picture={\path[draw=hwopD,fill=hwopF,line width=0.5pt]
+  mux/.style={hw@trk=b,text=hwopT,minimum width=0.45cm,minimum height=1cm,inner sep=0pt,font=\hw@ff\scriptsize,
+    path picture={\path[draw=hwopD,fill=hwopB,line width=\hw@lw]
       ($(path picture bounding box.north west)+(0.25pt,-0.25pt)$)--($(path picture bounding box.north east)+(-0.25pt,-6pt)$)
       --($(path picture bounding box.south east)+(-0.25pt,6pt)$)--($(path picture bounding box.south west)+(0.25pt,0.25pt)$)--cycle;}},
   % demultiplexer (input on west, outputs on east)
-  demux/.style={minimum width=0.45cm,minimum height=1cm,inner sep=0pt,font=\scriptsize,
-    path picture={\path[draw=hwopD,fill=hwopF,line width=0.5pt]
+  demux/.style={hw@trk=b,text=hwopT,minimum width=0.45cm,minimum height=1cm,inner sep=0pt,font=\hw@ff\scriptsize,
+    path picture={\path[draw=hwopD,fill=hwopB,line width=\hw@lw]
       ($(path picture bounding box.north west)+(0.25pt,-6pt)$)--($(path picture bounding box.north east)+(-0.25pt,-0.25pt)$)
       --($(path picture bounding box.south east)+(-0.25pt,0.25pt)$)--($(path picture bounding box.south west)+(0.25pt,6pt)$)--cycle;}},
   % grouping frame (use on background layer with fit=...)
-  group/.style={draw=hwgroupD,fill=hwgroupF,rounded corners,inner sep=5pt},
-  grouplabel/.style={font=\footnotesize\itshape,text=hwgroupD!80!black},
+  group/.style={draw=hwgroupD,fill=hwgroupB,rounded corners=\hw@rcio,inner sep=5pt},
+  grouplabel/.style={font=\hw@ff\footnotesize\itshape,text=hwgroupD!80!hwtext},
   % wires
-  arr/.style={draw=hwwire,-{Latex[length=2mm]}},
-  darr/.style={draw=hwcwire,-{Latex[length=1.8mm]},dashed},
-  bus/.style={draw=hwwire,line width=1.2pt,-{Latex[length=2.4mm,width=2mm]}},
-  hot/.style={draw=hwaccent,line width=1pt,-{Latex[length=2mm]}},  % highlighted / critical path
+  arr/.style={hw@wire,draw=hwwire,-{Latex[length=2mm]}},
+  darr/.style={hw@wire,draw=hwcwire,-{Latex[length=1.8mm]},dashed},
+  bus/.style={hw@wire,draw=hwwire,line width=2.4*\hw@lw,-{Latex[length=2.4mm,width=2mm]}},
+  hot/.style={hw@wire,draw=hwaccent,line width=2*\hw@lw,-{Latex[length=2mm]}},  % highlighted / critical path
   % edge label (protocol / signal name), e.g.  node[lbl]{AXI4-S}
-  lbl/.style={font=\scriptsize,inner sep=1.5pt,text=hwwire},
+  lbl/.style={font=\hw@ff\scriptsize,inner sep=1.5pt,text=hwwire,hw@trk=l},
   % same, with a white backing so it stays readable over crossing wires
-  lblbox/.style={lbl,fill=white,inner sep=1pt},
+  lblbox/.style={lbl,fill=hwpaper,inner sep=1pt},
   % --- FPGA / SoC primitives --------------------------------------------
   % DSP slice; the "DSP" tag sits just outside the top-right corner so it
   % never collides with multi-line content
-  dsp/.style={draw=hwopD,fill=hwopF,minimum width=1.1cm,minimum height=0.9cm,align=center,inner sep=2pt,
-    label={[font=\tiny,text=hwopD,inner sep=1pt,anchor=south east]north east:DSP}},
-  lut/.style={draw=hwcompD,fill=hwcompF,minimum width=0.8cm,minimum height=0.8cm,align=center,inner sep=1pt,font=\scriptsize},
+  dsp/.style={hw@box=op,rounded corners=\hw@rcbox,minimum width=1.1cm,minimum height=0.9cm,align=center,inner sep=2pt,
+    label={[font=\hw@ff\tiny,text=hwopD,inner sep=1pt,anchor=south east]north east:DSP}},
+  lut/.style={hw@box=comp,rounded corners=\hw@rcbox,minimum width=0.8cm,minimum height=0.8cm,align=center,inner sep=1pt,font=\hw@ff\scriptsize},
   ff/.style={reg},
   bram/.style={mem,minimum width=1.2cm},
-  uram/.style={mem,minimum width=1.2cm,line width=0.9pt},
-  extmem/.style={draw=hwmemD,fill=hwmemF,cylinder,shape border rotate=90,aspect=0.18,
+  uram/.style={mem,minimum width=1.2cm,line width=1.8*\hw@lw},
+  extmem/.style={hw@box=mem,cylinder,shape border rotate=90,aspect=0.18,
     minimum height=1.1cm,minimum width=1.3cm,align=center,inner sep=2pt},          % DDR / HBM
-  cpu/.style={draw=hwctrlD,fill=hwctrlF,double,double distance=1.2pt,minimum width=1.8cm,minimum height=1cm,align=center,inner sep=3pt}, % PS / ARM / RISC-V
-  host/.style={draw=hwioD,fill=hwioF,minimum width=1.8cm,minimum height=1cm,align=center,inner sep=3pt,
-    path picture={\fill[hwioD!25] (path picture bounding box.north west) rectangle ($(path picture bounding box.north east)+(0,-3pt)$);}},
-  xbar/.style={draw=hwopD,fill=hwopF,minimum width=0.6cm,minimum height=2.2cm,align=center,inner sep=1pt,font=\scriptsize}, % AXI interconnect / crossbar (use \rotatebox for text)
-  router/.style={draw=hwopD,fill=hwopF,diamond,aspect=1,minimum size=0.75cm,inner sep=0pt,font=\scriptsize},   % NoC router / switch
-  pe/.style={draw=hwcompD,fill=hwcompF,minimum size=0.75cm,inner sep=1pt,font=\scriptsize,align=center},       % processing element
+  cpu/.style={hw@box=ctrl,rounded corners=\hw@rcbox,double=hwpaper,double distance=1.2pt,minimum width=1.8cm,minimum height=1cm,align=center,inner sep=3pt}, % PS / ARM / RISC-V
+  host/.style={hw@box=io,rounded corners=\hw@rcbox,minimum width=1.8cm,minimum height=1cm,align=center,inner sep=3pt,
+    path picture={\fill[hwioD!25!hwioB,sharp corners] (path picture bounding box.north west) rectangle ($(path picture bounding box.north east)+(0,-3pt)$);}},
+  xbar/.style={hw@box=op,rounded corners=\hw@rcbox,minimum width=0.6cm,minimum height=2.2cm,align=center,inner sep=1pt,font=\hw@ff\scriptsize}, % AXI interconnect / crossbar (use \rotatebox for text)
+  router/.style={hw@box=op,diamond,aspect=1,minimum size=0.75cm,inner sep=0pt,font=\hw@ff\scriptsize},   % NoC router / switch
+  pe/.style={hw@box=comp,rounded corners=\hw@rcbox,minimum size=0.75cm,inner sep=1pt,font=\hw@ff\scriptsize,align=center},       % processing element
   port/.style={draw=hwioD,fill=hwioD,minimum size=3pt,inner sep=0pt},                                          % pin / port marker
   chip/.style={draw=hwioD,fill=hwgroupF,thick,minimum width=3cm,minimum height=2cm,align=center,inner sep=4pt,
     path picture={\foreach \t in {0.15,0.3,...,0.86}{%
@@ -184,11 +369,11 @@
       \draw[hwioD,thick] ($(path picture bounding box.south west)!\t!(path picture bounding box.north west)$)--++(3pt,0);
       \draw[hwioD,thick] ($(path picture bounding box.south east)!\t!(path picture bounding box.north east)$)--++(-3pt,0);}}},
   % --- regions -------------------------------------------------------------
-  clkdomain/.style={draw=#1,dash pattern=on 4pt off 2pt,rounded corners,inner sep=6pt,fill=#1!4},
+  clkdomain/.style={draw=#1,dash pattern=on 4pt off 2pt,rounded corners=\hw@rcio,inner sep=6pt,fill=#1!4!hwpaper},
   clkdomain/.default=hwaccent,
   plregion/.style={group},                                       % PL / fabric region
-  psregion/.style={draw=hwctrlD,fill=hwctrlF!40,rounded corners,inner sep=5pt},
-  cdc/.style={draw=hwaccent,fill=white,minimum width=0.5cm,minimum height=0.5cm,inner sep=0pt,font=\tiny,
+  psregion/.style={draw=hwctrlD,fill=hwctrlF!40!hwpaper,rounded corners=\hw@rcio,inner sep=5pt},
+  cdc/.style={hw@trk=b,draw=hwaccent,fill=hwpaper,minimum width=0.5cm,minimum height=0.5cm,inner sep=0pt,font=\hw@ff\tiny,
     path picture={\draw[hwaccent] (path picture bounding box.south west)--(path picture bounding box.north east);}},
 }
 
@@ -212,17 +397,17 @@
   % label sits right of the tick (clear of horizontal AND vertical wires);
   % buswidth' puts it on the left instead.
   pics/buswidth/.style={code={
-    \draw[hwwire,line width=0.5pt,-] (-2.5pt,-3.5pt)--(2.5pt,3.5pt);
-    \node[font=\tiny,inner sep=1pt,text=hwwire,anchor=south west] at (3pt,1pt) {#1};}},
+    \draw[hwwire,line width=\hw@lw,-] (-2.5pt,-3.5pt)--(2.5pt,3.5pt);
+    \node[font=\hw@ff\tiny,inner sep=1pt,text=hwwire,anchor=south west] at (3pt,1pt) {#1};}},
   pics/buswidth'/.style={code={
-    \draw[hwwire,line width=0.5pt,-] (-2.5pt,-3.5pt)--(2.5pt,3.5pt);
-    \node[font=\tiny,inner sep=1pt,text=hwwire,anchor=south east] at (-3pt,1pt) {#1};}},
+    \draw[hwwire,line width=\hw@lw,-] (-2.5pt,-3.5pt)--(2.5pt,3.5pt);
+    \node[font=\hw@ff\tiny,inner sep=1pt,text=hwwire,anchor=south east] at (-3pt,1pt) {#1};}},
   % AIE tile: core (left 62%) + local data memory (right); the label is
   % centred on the core part
-  aie/.style={draw=hwcompD,fill=hwcompF,minimum width=0.9cm,minimum height=0.62cm,inner sep=1pt,font=\tiny,
+  aie/.style={hw@box=comp,minimum width=0.9cm,minimum height=0.62cm,inner sep=1pt,font=\hw@ff\tiny,
     execute at begin node={\hspace*{-0.3cm}},
-    path picture={\fill[hwmemF] ($(path picture bounding box.south west)!0.62!(path picture bounding box.south east)$) rectangle (path picture bounding box.north east);
-      \draw[hwmemD] ($(path picture bounding box.south west)!0.62!(path picture bounding box.south east)$)--($(path picture bounding box.north west)!0.62!(path picture bounding box.north east)$);}},
+    path picture={\fill[hwmemB] ($(path picture bounding box.south west)!0.62!(path picture bounding box.south east)$) rectangle (path picture bounding box.north east);
+      \draw[hwmemL,sharp corners] ($(path picture bounding box.south west)!0.62!(path picture bounding box.south east)$)--($(path picture bounding box.north west)!0.62!(path picture bounding box.north east)$);}},
   %
   % pic{aiearray}: rows x cols AIE tiles + PL-interface shim row. Tiles: (<name>-t<r>-<c>) (r=1 bottom), shim: (<name>-s<c>), frame: (<name>-box)
   pics/aiearray/.default={},
@@ -230,7 +415,7 @@
     \pgfmathtruncatemacro\hwR{\hw@v{rows}}\pgfmathtruncatemacro\hwC{\hw@v{cols}}%
     \pgfmathsetmacro\hwdx{\hw@v{dx}}\pgfmathsetmacro\hwdy{\hw@v{dy}}%
     \foreach \c in {1,...,\hwC}{%
-      \node[draw=hwioD,fill=hwioF,minimum width=0.9cm,minimum height=0.32cm,inner sep=0pt,font=\tiny] (-s\c) at ({(\c-1)*\hwdx},{-0.78}) {shim};
+      \node[hw@box=io,minimum width=0.9cm,minimum height=0.32cm,inner sep=0pt,font=\hw@ff\tiny] (-s\c) at ({(\c-1)*\hwdx},{-0.78}) {shim};
       \foreach \r in {1,...,\hwR}{\node[aie] (-t\r-\c) at ({(\c-1)*\hwdx},{(\r-1)*\hwdy}) {\hw@v{tilelabel}};}}%
     \foreach \c in {1,...,\hwC}{\foreach \r in {1,...,\hwR}{%
       \ifnum\c<\hwC \draw[hwcwire,-{Latex[length=1.2mm]}] ({(\c-1)*\hwdx+0.45},{(\r-1)*\hwdy})--({\c*\hwdx-0.45},{(\r-1)*\hwdy});\fi
@@ -311,7 +496,7 @@
     \foreach \r in {1,...,\hwR}{\foreach \c in {1,...,\hwC}{%
       \node[router,minimum size=0.6cm] (-n\r-\c) at ({(\c-1)*1.3},{-(\r-1)*1.3}) {R};
       \ifx\hw@tmp\hw@true
-        \node[pe,minimum size=0.42cm,font=\tiny] (-pe\r-\c) at ({(\c-1)*1.3+0.52},{-(\r-1)*1.3+0.47}) {PE};
+        \node[pe,minimum size=0.42cm,font=\hw@ff\tiny] (-pe\r-\c) at ({(\c-1)*1.3+0.52},{-(\r-1)*1.3+0.47}) {PE};
         \draw[hwcwire] (-n\r-\c.north east) -- (-pe\r-\c.south west);
       \fi}}%
     \foreach \r in {1,...,\hwR}{\foreach \c in {1,...,\hwC}{%
@@ -321,7 +506,7 @@
   % pic{legend}: key of role swatches, spaced by label width.
   %   \pic at (x,y) {legend={legend={comp/Compute,mem/BRAM}}};
   % roles: io comp quant const op mem ctrl group
-  swatch/.style={draw=hw#1D,fill=hw#1F,minimum width=0.32cm,minimum height=0.24cm,inner sep=0pt},
+  swatch/.style={draw=hw#1D,fill=hw#1B,minimum width=0.32cm,minimum height=0.24cm,inner sep=0pt},
   pics/legend/.default={},
   pics/legend/.style={code={\hwset{#1}%
     \edef\hwleg{\hw@v{legend}}%
@@ -329,6 +514,183 @@
     \foreach \st/\tx [count=\i] in \hwleg {%
       \pgfmathtruncatemacro\ip{\i-1}%
       \node[swatch=\st,anchor=west] (-sw\i) at ($(-lg\ip.east)+(0.4,0)$) {};
-      \node[anchor=west,font=\scriptsize,inner sep=2pt] (-lg\i) at (-sw\i.east) {\tx};}}},
+      \node[anchor=west,font=\hw@ff\scriptsize,inner sep=2pt] (-lg\i) at (-sw\i.east) {\tx};}}},
 }
+
+% ---- v1.2 additions: flow / FSM / ML shapes, annotations, extra wires --------
+\pgfkeys{/hw/.cd, layers/.initial={3,5,5,2}, lsep/.initial=1.3, nsep/.initial=0.5}
+\tikzset{
+  % paint the picture background with the palette's paper colour (dark palettes)
+  % (drawn on its own layer below `background', so frames stay visible)
+  hwcanvas/.style={execute at end picture={\begin{pgfonlayer}{hwcanvas}
+    \fill[hwpaper] ($(current bounding box.south west)+(-6pt,-6pt)$) rectangle ($(current bounding box.north east)+(6pt,6pt)$);
+    \end{pgfonlayer}}},
+  % terminator / external port (pill)
+  term/.style={hw@box=io,rounded rectangle,minimum height=0.6cm,minimum width=1.2cm,inner xsep=5pt,inner ysep=2pt,align=center},
+  % decision / branch condition
+  decision/.style={hw@box=ctrl,diamond,aspect=1.7,inner sep=1pt,align=center,font=\hw@ff\scriptsize},
+  % FSM state, accepting / idle state
+  state/.style={hw@box=ctrl,circle,minimum size=0.85cm,inner sep=1pt,align=center,font=\hw@ff\scriptsize},
+  accstate/.style={state,double=hwpaper,double distance=1pt},
+  % buffer / driver / amplifier (triangle pointing east)
+  buf/.style={hw@box=comp,isosceles triangle,isosceles triangle apex angle=60,minimum height=0.65cm,inner sep=1pt,font=\hw@ff\tiny},
+  % network / anything outside the system
+  net/.style={hw@box=io,cloud,cloud puffs=10,cloud puff arc=110,aspect=1.9,inner sep=0pt,minimum width=1.9cm,minimum height=1.1cm,align=center},
+  % neural-network unit
+  neuron/.style={hw@box=comp,circle,minimum size=0.4cm,inner sep=0pt,font=\hw@ff\tiny},
+  % wire junction:  \node[dot] at (fork) {};
+  dot/.style={circle,fill=hwwire,inner sep=0pt,minimum size=2.8pt},
+  % numbered call-out for step-by-step explanations
+  badge/.style={circle,fill=hwaccent,text=hwpaper,inner sep=0pt,minimum size=0.36cm,font=\hw@ff\tiny\bfseries},
+  % free annotation text
+  note/.style={font=\hw@ff\scriptsize\itshape,text=hwcwire,align=left,inner sep=2pt},
+  % "N copies of this block": add to any box style, e.g. [hlsbox,stack]
+  % (in solid fill mode the copies get a paper-coloured outline so they stay distinct)
+  stack/.code={\ifx\hw@fillmode\hw@solid
+      \tikzset{double copy shadow={shadow xshift=2.4pt,shadow yshift=2.4pt,opacity=1,draw=hwpaper}}%
+    \else\tikzset{double copy shadow={shadow xshift=2.4pt,shadow yshift=2.4pt,opacity=1}}\fi},
+  % extra wires
+  biarr/.style={hw@wire,draw=hwwire,{Latex[length=2mm]}-{Latex[length=2mm]}},
+  ctlarr/.style={hw@wire,draw=hwctrlD,densely dashed,-{Latex[length=1.8mm]}},     % control / handshake
+  link/.style={hw@wire,draw=hwwire,line width=1.2*\hw@lw,double=hwpaper,double distance=2.4*\hw@lw,
+    -{Latex[length=2.8mm,width=2.6mm]}},                                    % serial / optical link
+  % dimension brace:  \draw[brace] (a.north west) -- (a.north east) node[lbl,midway,above=5pt]{8 bit};
+  brace/.style={draw=hwcwire,decorate,decoration={brace,amplitude=4pt,raise=2pt}},
+  brace'/.style={draw=hwcwire,decorate,decoration={brace,amplitude=4pt,raise=2pt,mirror}},
+  %
+  % pic{mlp}: fully connected network. layers={3,5,5,2}, lsep (x pitch), nsep (y pitch).
+  % Units: (<name>-l<layer>-<k>), k=1 on top
+  pics/mlp/.default={},
+  pics/mlp/.style={code={\hwset{#1}%
+    \edef\hw@ly{\hw@v{layers}}%
+    \pgfmathsetmacro\hw@ls{\hw@v{lsep}}\pgfmathsetmacro\hw@ns{\hw@v{nsep}}%
+    \foreach \n [count=\l] in \hw@ly {%
+      \expandafter\xdef\csname hw@mlp@\l\endcsname{\n}\xdef\hw@mlpL{\l}%
+      \foreach \k in {1,...,\n}{\node[neuron] (-l\l-\k) at ({(\l-1)*\hw@ls},{((\n+1)/2-\k)*\hw@ns}) {};}}%
+    \ifnum\hw@mlpL>1
+      \foreach \l in {2,...,\hw@mlpL}{%
+        \pgfmathtruncatemacro\lp{\l-1}%
+        \edef\hw@na{\csname hw@mlp@\lp\endcsname}\edef\hw@nb{\csname hw@mlp@\l\endcsname}%
+        \foreach \a in {1,...,\hw@na}{\foreach \b in {1,...,\hw@nb}{%
+          \draw[hwcwire,line width=0.3pt] (-l\lp-\a)--(-l\l-\b);}}}%
+    \fi
+  }},
+}
+
+% ---- layout check: \usepackage[check]{hwfig} or \hwsetup{check} before the
+%      picture.  Warns (and marks in red) when two boxes overlap, a wire label
+%      sits on a box, a wire runs through a box, or a wire is too short for
+%      its arrow tip.  Exempt one node with the `nocheck' key. -----------------
+\newif\ifhw@check
+\newdimen\hw@xa\newdimen\hw@ya\newdimen\hw@xb\newdimen\hw@yb
+\newdimen\hw@px\newdimen\hw@py\newdimen\hw@pd
+\newcount\hw@nprob\newcount\hw@i\newcount\hw@j
+\let\hw@b\relax\let\hw@l\relax\let\hw@p\relax\let\hw@w\relax
+\def\hw@chkinit{\gdef\hw@boxes{}\gdef\hw@lbls{}\gdef\hw@pts{}\gdef\hw@skips{,}\global\hw@nprob=0 }
+\def\hw@mm#1{%
+  \pgfextractx\hw@px{\pgfpointtransformed{\pgfpointanchor{\hw@n}{#1}}}%
+  \pgfextracty\hw@py{\pgfpointtransformed{\pgfpointanchor{\hw@n}{#1}}}%
+  \ifdim\hw@px<\hw@xa\hw@xa\hw@px\fi\ifdim\hw@px>\hw@xb\hw@xb\hw@px\fi
+  \ifdim\hw@py<\hw@ya\hw@ya\hw@py\fi\ifdim\hw@py>\hw@yb\hw@yb\hw@py\fi}
+\def\hw@rect{rectangle}\def\hw@rrect{rounded rectangle}\def\hw@cyl{cylinder}
+% #1 = b (box) | l (label), #2 = node name
+\def\hw@record#1#2{\begingroup\edef\hw@n{#2}%
+  \hw@xa16000pt\hw@ya16000pt\hw@xb-16000pt\hw@yb-16000pt
+  \hw@mm{west}\hw@mm{east}\hw@mm{south}\hw@mm{north}%
+  \edef\hw@s{\csname pgf@sh@ns@\hw@n\endcsname}%
+  \ifx\hw@s\hw@rect\else\ifx\hw@s\hw@rrect\else\ifx\hw@s\hw@cyl\else  % round shapes: inner 70%
+    \hw@px\dimexpr(\hw@xb-\hw@xa)*15/100\relax\advance\hw@xa\hw@px\advance\hw@xb-\hw@px
+    \hw@py\dimexpr(\hw@yb-\hw@ya)*15/100\relax\advance\hw@ya\hw@py\advance\hw@yb-\hw@py
+  \fi\fi\fi
+  \if b#1\xdef\hw@boxes{\hw@boxes\hw@b{\hw@n}{\the\hw@xa}{\the\hw@ya}{\the\hw@xb}{\the\hw@yb}}%
+  \else\xdef\hw@lbls{\hw@lbls\hw@l{\hw@n}{\the\hw@xa}{\the\hw@ya}{\the\hw@xb}{\the\hw@yb}}\fi
+  \endgroup}
+\def\hw@sample#1#2{%
+  \pgfextractx\hw@px{\pgfpointtransformed{#1}}\pgfextracty\hw@py{\pgfpointtransformed{#1}}%
+  \xdef\hw@cur{\hw@cur\hw@p{\the\hw@px}{\the\hw@py}{#2}}}
+\pgfdeclaredecoration{hw@probe}{init}{
+  \state{init}[width=0pt,next state=s]{\gdef\hw@cur{}\global\hw@j0 }
+  \state{s}[width=2.5pt]{\hw@sample{\pgfpointorigin}{\the\dimexpr2.5pt*\hw@j\relax}\global\advance\hw@j1 }
+  \state{final}{\hw@sample{\pgfpointdecoratedpathlast}{\pgfdecoratedpathlength}%
+    \xdef\hw@pts{\hw@pts\hw@w\hw@cur\hw@w}}
+}
+\tikzset{
+  hw@trk/.code={\ifhw@check\tikzset{append after command={\pgfextra{\hw@record{#1}{\tikzlastnode}}}}\fi},
+  hw@wire/.code={\ifhw@check\tikzset{postaction={decorate,decoration={hw@probe}}}\fi},
+  hw@chk/.code={\ifhw@check\tikzset{execute at begin picture=\hw@chkinit,execute at end picture=\hw@chkrun}\fi},
+  nocheck/.code={\ifhw@check\tikzset{append after command={\pgfextra{\xdef\hw@skips{\hw@skips\tikzlastnode,}}}}\fi},
+}
+% -- reporting
+\def\hw@at#1#2#3#4{\pgfmathtruncatemacro\hw@cx{round((#1+#3)/5.69055)}%
+  \pgfmathtruncatemacro\hw@cy{round((#2+#4)/5.69055)}\edef\hw@pos{(\hw@cx,\hw@cy)mm}}
+\def\hw@desc#1#2#3#4#5{%  -> \hw@d : `name' or a position
+  \edef\hw@t{\noexpand\in@{tikz@f@}{#1}}\hw@t
+  \ifin@\hw@at{#2}{#3}{#4}{#5}\edef\hw@d{unnamed node near \hw@pos}\else\edef\hw@d{node `#1'}\fi}
+\def\hw@warn#1{\global\advance\hw@nprob1 \PackageWarning{hwfig}{check: #1}}
+\def\hw@markrect#1#2#3#4{\begin{pgfscope}\pgftransformreset\pgfsetfillcolor{red}\pgfsetfillopacity{0.45}%
+  \pgfpathrectanglecorners{\pgfqpoint{#1}{#2}}{\pgfqpoint{#3}{#4}}\pgfusepath{fill}\end{pgfscope}}
+\def\hw@markpt#1#2{\begin{pgfscope}\pgftransformreset\pgfsetstrokecolor{red}\pgfsetlinewidth{1pt}%
+  \pgfpathcircle{\pgfqpoint{#1}{#2}}{4pt}\pgfusepath{stroke}\end{pgfscope}}
+\def\hw@ifskip#1{\edef\hw@t{\noexpand\in@{,#1,}{\hw@skips}}\hw@t\ifin@\expandafter\@gobble\else\expandafter\@firstofone\fi}
+% rectangles {A}{B}: overlap by more than #9 -> mark and run \hw@hit
+\def\hw@isect#1#2#3#4#5#6#7#8#9{%
+  \ifdim\dimexpr#1+#9\relax<#7\ifdim\dimexpr#5+#9\relax<#3%
+  \ifdim\dimexpr#2+#9\relax<#8\ifdim\dimexpr#6+#9\relax<#4%
+    \hw@xa#1\ifdim#5>\hw@xa\hw@xa#5\fi\hw@ya#2\ifdim#6>\hw@ya\hw@ya#6\fi
+    \hw@xb#3\ifdim#7<\hw@xb\hw@xb#7\fi\hw@yb#4\ifdim#8<\hw@yb\hw@yb#8\fi
+    \hw@markrect{\hw@xa}{\hw@ya}{\hw@xb}{\hw@yb}\hw@hit
+  \fi\fi\fi\fi}
+\def\hw@chkrun{\begingroup
+  % 1. box / box
+  \hw@i0
+  \def\hw@b##1##2##3##4##5{\advance\hw@i1 \hw@ifskip{##1}{%
+    \begingroup\hw@j0
+    \def\hw@b####1####2####3####4####5{\advance\hw@j1
+      \ifnum\hw@j>\hw@i\hw@ifskip{####1}{%
+        \def\hw@hit{\hw@desc{##1}{##2}{##3}{##4}{##5}\let\hw@da\hw@d
+          \hw@desc{####1}{####2}{####3}{####4}{####5}\hw@warn{\hw@da\space and \hw@d\space overlap}}%
+        \hw@isect{##2}{##3}{##4}{##5}{####2}{####3}{####4}{####5}{1pt}}\fi}%
+    \hw@boxes\endgroup}}%
+  \hw@boxes
+  % 2. label / box
+  \def\hw@l##1##2##3##4##5{\hw@ifskip{##1}{%
+    \begingroup
+    \def\hw@b####1####2####3####4####5{\hw@ifskip{####1}{%
+      \def\hw@hit{\hw@desc{####1}{####2}{####3}{####4}{####5}\hw@at{##2}{##3}{##4}{##5}%
+        \hw@warn{a wire label near \hw@pos\space overlaps \hw@d}}%
+      \hw@isect{##2}{##3}{##4}{##5}{####2}{####3}{####4}{####5}{1.5pt}}}%
+    \hw@boxes\endgroup}}%
+  \hw@lbls
+  % 3. wire through box (boxes shrunk by 2pt so border contacts do not count)
+  \def\hw@b##1##2##3##4##5{\hw@ifskip{##1}{%
+    \begingroup\let\hw@f\relax
+    \def\hw@w{\let\hw@f\relax}%
+    \def\hw@p####1####2####3{\ifx\hw@f\relax
+      \ifdim####1>\dimexpr##2+2pt\relax\ifdim####1<\dimexpr##4-2pt\relax
+      \ifdim####2>\dimexpr##3+2pt\relax\ifdim####2<\dimexpr##5-2pt\relax
+        \def\hw@f{1}\hw@markpt{####1}{####2}\hw@desc{##1}{##2}{##3}{##4}{##5}%
+        \hw@warn{a wire runs through \hw@d}%
+      \fi\fi\fi\fi\fi}%
+    \hw@pts\endgroup}}%
+  \hw@boxes
+  % 4. wires too short for their arrow tip, or bent right before the tip
+  \def\hw@A{}\def\hw@B{}\def\hw@C{}\def\hw@D{}%
+  \def\hw@p##1##2##3{\let\hw@A\hw@B\let\hw@B\hw@C\let\hw@C\hw@D\def\hw@D{{##1}{##2}{##3}}}%
+  \def\hw@w{\ifx\hw@D\@empty\else\expandafter\hw@tip\hw@D\fi
+    \def\hw@A{}\def\hw@B{}\def\hw@C{}\def\hw@D{}}%
+  \def\hw@tip##1##2##3{%
+    \ifdim##3<7pt \hw@markpt{##1}{##2}\hw@at{##1}{##2}{##1}{##2}%
+      \hw@warn{the wire ending near \hw@pos\space is shorter than its arrow tip}%
+    \else\ifx\hw@A\@empty\else\expandafter\hw@bend\hw@A{##1}{##2}{##3}\fi\fi}%
+  \def\hw@bend##1##2##3##4##5##6{%
+    \hw@pd\dimexpr##6-##3\relax
+    \pgfmathparse{veclen(##4-##1,##5-##2)<0.9*\hw@pd}%
+    \ifnum\pgfmathresult=1 \hw@markpt{##4}{##5}\hw@at{##4}{##5}{##4}{##5}%
+      \hw@warn{the wire ending near \hw@pos\space bends inside its arrow tip: lengthen the last segment}\fi}%
+  \hw@pts
+  \typeout{hwfig check: \the\hw@nprob\space problem(s) in the picture ending on line \the\inputlineno}%
+  \endgroup}
+
+% ---- apply the package options ------------------------------------------------
+\edef\hw@tmp{\noexpand\hwsetup{\hw@opts}}\hw@tmp
 \endinput

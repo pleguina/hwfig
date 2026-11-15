@@ -1,0 +1,32 @@
+% Shape themes, fill modes, fonts and line weights on one small dataflow.
+\documentclass[tikz,border=8pt]{standalone}
+\usepackage[okabe]{hwfig}
+% #1 = \hwsetup keys, #2 = y position
+\newcommand\themerow[2]{%
+  \begin{scope}[shift={(0,#2)}]
+    \hwsetup{#1}
+    \node[font=\scriptsize\ttfamily,text=black!70,anchor=west] at (-0.75,0.85) {\textbackslash hwsetup\{\detokenize{#1}\}};
+    \node[runtime] (x) at (0,0) {$x_i$};
+    \node[hlsbox,minimum width=1.5cm] (k) at (2.0,0) {MAC};
+    \node[qbox] (q) at (4.1,0) {sat8};
+    \node[op] (s) at (5.6,0) {$+$};
+    \node[mem,minimum width=1.3cm] (m) at (7.2,0) {buffer};
+    \node[ctrl,minimum width=1.2cm] (f) at (9.1,0) {FSM};
+    \node[ctime] (w) at (10.7,0) {$W$};
+    \node[hlsbox,stack,minimum width=1.1cm] (n) at (12.4,0) {$\times 4$};
+    \draw[arr] (x)--(k); \draw[arr] (k)--(q); \draw[hot] (q)--(s); \draw[arr] (s)--(m);
+    \draw[ctlarr] (f)--(m); \draw[darr] (w)--(f);
+  \end{scope}}
+\begin{document}
+\begin{tikzpicture}[hw]
+  \themerow{shape=classic}{0}
+  \themerow{shape=soft}{-1.7}
+  \themerow{shape=round}{-3.4}
+  \themerow{shape=pill}{-5.1}
+  \themerow{shape=sharp}{-6.8}
+  \themerow{shape=round,fill=solid}{-8.5}
+  \themerow{shape=round,fill=outline}{-10.2}
+  \themerow{shape=round,font=sans,line=bold}{-11.9}
+  \themerow{shape=pill,fill=solid,font=sans,shadow}{-13.6}
+\end{tikzpicture}
+\end{document}

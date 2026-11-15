@@ -1,0 +1,54 @@
+% A trigger-style processing chain in the NGT palette: page 1 for papers
+% (white), page 2 for slides (dark, solid fills, sans font); pages 3-4 the navy /
+% teal / amber slide theme (ngtblue, ngtnight).
+\documentclass[tikz,border=8pt]{standalone}
+\usepackage{hwfig}
+\newcommand\chain{%
+\begin{tikzpicture}[hw,hwcanvas]
+  \node[term] (det) at (-0.8,0) {Detector\\front-end};
+  \node[hlsbox,stack,minimum width=1.5cm] (rx) at (3.1,0) {Link RX\\decode};
+  \node[fifo] (al) at (5.6,0) {align};
+  \pic (nn) at (7.5,0) {mlp={layers={3,4,4,2},lsep=0.75,nsep=0.42}};
+  \node[qbox] (q) at (11.4,0) {shift\\+ sat8};
+  \node[hlsbox,minimum width=1.5cm] (sort) at (13.6,0) {Sort\\+ merge};
+  \node[decision] (dec) at (16.0,0) {accept?};
+  \node[term] (daq) at (18.3,0) {DAQ};
+  \node[net] (hlt) at (16.0,-2.1) {HLT farm};
+
+  \node[ctime] (w) at (8.65,1.75) {$W,\,b$};
+  \node[ctime] (s) at (11.4,1.75) {$S$};
+  \node[ctrl] (fsm) at (5.6,-2.1) {Readout FSM};
+  \node[bram] (lut) at (13.6,-2.1) {LUT};
+
+  \draw[link] (det) -- (rx) node[lbl,midway,above=3pt]{25 Gb/s};
+  \draw[bus] (rx) -- (al) pic[pos=.45]{buswidth=64};
+  \draw[arr] (al) -- (nn-l1-2);
+  \draw[arr] (nn-l4-1) -- ++(0.55,0) node[dot] (j) {} |- (q.west);
+  \draw (nn-l4-2) -| (j);
+  \draw[hot] (q) -- (sort);
+  \draw[hot] (sort) -- (dec);
+  \draw[hot] (dec) -- (daq) node[lbl,midway,above]{yes};
+  \draw[arr] (dec) -- (hlt) node[lbl,midway,right]{no};
+  \draw[darr] (w) -- (8.65,0.95);
+  \draw[darr] (s) -- (q);
+  \draw[darr] (lut) -- (sort);
+  \draw[ctlarr] (fsm) -- (al);
+  \draw[ctlarr] (fsm.east) -- (8.65,-2.1) -- (8.65,-0.95);
+
+  \node[badge] at ($(rx.north west)+(0.15,0.32)$) {1};
+  \node[badge] at (7.05,1.1) {2};
+  \node[badge] at ($(sort.north west)+(0.15,0.32)$) {3};
+  \node[note,anchor=north west] at (9.0,-1.1) {fully unrolled,\\ II $=1$};
+
+  \begin{scope}[on background layer]
+    \node[group,fit=(nn-l1-1)(nn-l1-3)(nn-l4-1)(nn-l2-4),inner sep=7pt] (nnbox) {};
+    \coordinate (tl) at (2.0,2.35); \coordinate (br) at (14.7,-2.75);
+    \node[clkdomain,fill=none,fit=(tl)(br),inner sep=0pt,label={[grouplabel,text=hwaccent,anchor=south west]north west:FPGA trigger processor @ 40 MHz}] {};
+  \end{scope}
+\end{tikzpicture}}
+\begin{document}
+\hwsetup{palette=ngt,shape=round}\chain
+\hwsetup{palette=ngtdark,shape=round,fill=solid,font=sans}\chain
+\hwsetup{palette=ngtblue,shape=round,fill=tint,font=serif}\chain
+\hwsetup{palette=ngtnight,shape=round,fill=tint,font=sans}\chain
+\end{document}
