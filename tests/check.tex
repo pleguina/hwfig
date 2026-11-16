@@ -23,4 +23,12 @@
   \draw[arr] (x)--(k) node[lbl,midway,above]{in}; \draw[hot] (k)--(s); \draw[darr] (w)--(k);
   \draw[arr] (x.south) -- ++(0,-0.6) -| (s.south);
 \end{tikzpicture}
+
+% check switched on inside a picture, with the package loaded without it
+\hwsetup{check=false}
+\begin{tikzpicture}[hw]
+  \hwsetup{check}
+  \node[hlsbox] (p) at (0,0) {P};
+  \node[qbox] (q) at (0.9,0.1) {Q};
+\end{tikzpicture}
 \end{document}

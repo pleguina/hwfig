@@ -1,0 +1,18 @@
+\hwdefinepalette{forest}{%
+  \hwrole{io}{black}{white}
+  \hwrole{comp}{green!45!black}{green!12}
+  \hwrole{quant}{orange!80!black}{orange!15}
+  \hwrole{const}{black!55}{black!4}
+  \hwrole{op}{red!70!black}{red!10}
+  \hwrole{mem}{teal!80!black}{teal!12}
+  \hwrole{ctrl}{brown}{brown!15}
+  \hwrole{group}{green!35!black}{green!3}
+  \hwwires{black}{black!50}{orange!85!black}}
+\begin{tikzpicture}[hw]
+  \hwpalette{forest}
+  \node[hlsbox] (a) at (0,0) {kernel};
+  \node[mem]    (b) at (2.6,0) {buffer};
+  \node[qbox]   (c) at (5.0,0) {requant};
+  \draw[arr] (a) -- (b);
+  \draw[hot] (b) -- (c);
+\end{tikzpicture}

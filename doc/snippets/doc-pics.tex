@@ -1,0 +1,6 @@
+\begin{tikzpicture}[hw]
+  \node[hlsbox] (src) at (-2.4,0.5) {mm2s};
+  \pic (A) at (0,0.4) {aiearray={rows=2,cols=3}};
+  \pic (N) at (4.4,0.9) {mlp={layers={3,4,2},lsep=0.9,nsep=0.45}};
+  \draw[arr] (src.south) |- ($(A-s1.south)+(0,-0.35)$) -- (A-s1.south);
+\end{tikzpicture}

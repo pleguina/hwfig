@@ -587,6 +587,7 @@
 \newcount\hw@nprob\newcount\hw@i\newcount\hw@j
 \let\hw@b\relax\let\hw@l\relax\let\hw@p\relax\let\hw@w\relax
 \def\hw@chkinit{\gdef\hw@boxes{}\gdef\hw@lbls{}\gdef\hw@pts{}\gdef\hw@skips{,}\global\hw@nprob=0 }
+\hw@chkinit
 \def\hw@mm#1{%
   \pgfextractx\hw@px{\pgfpointtransformed{\pgfpointanchor{\hw@n}{#1}}}%
   \pgfextracty\hw@py{\pgfpointtransformed{\pgfpointanchor{\hw@n}{#1}}}%
@@ -617,7 +618,8 @@
 \tikzset{
   hw@trk/.code={\ifhw@check\tikzset{append after command={\pgfextra{\hw@record{#1}{\tikzlastnode}}}}\fi},
   hw@wire/.code={\ifhw@check\tikzset{postaction={decorate,decoration={hw@probe}}}\fi},
-  hw@chk/.code={\ifhw@check\tikzset{execute at begin picture=\hw@chkinit,execute at end picture=\hw@chkrun}\fi},
+  % hooks always installed, so \hwsetup{check} also works inside a picture
+  hw@chk/.style={execute at begin picture=\hw@chkinit,execute at end picture={\ifhw@check\hw@chkrun\fi}},
   nocheck/.code={\ifhw@check\tikzset{append after command={\pgfextra{\xdef\hw@skips{\hw@skips\tikzlastnode,}}}}\fi},
 }
 % -- reporting

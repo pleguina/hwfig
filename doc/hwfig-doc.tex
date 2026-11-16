@@ -1,0 +1,335 @@
+% hwfig user manual.  Compile with pdflatex (twice, for the contents).
+% Needs hwfig.sty on the search path; uses ../examples/ and snippets/.
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[margin=2.3cm]{geometry}
+\usepackage{booktabs,array,listings,xcolor}
+\usepackage{hwfig}
+\usepackage[hidelinks]{hyperref}
+
+\lstset{basicstyle=\ttfamily\small,columns=fullflexible,keepspaces,
+  frame=single,rulecolor=\color{black!25},xleftmargin=4pt,xrightmargin=4pt,
+  framexleftmargin=4pt,framexrightmargin=4pt,upquote=true}
+\newcommand\code[1]{\texttt{\detokenize{#1}}}
+\newcommand\cs[1]{\texttt{\textbackslash#1}}
+\newcommand\snippet[1]{%
+  \lstinputlisting{snippets/doc-#1.tex}\par\medskip
+  \begin{center}\input{snippets/doc-#1.tex}\end{center}}
+\setlength\parindent{0pt}\setlength\parskip{0.6em}
+
+% one strip per palette: the eight role swatches and the three wire colours
+\newcommand\palstrip[1]{%
+  \begin{tikzpicture}[hw,hwcanvas]\hwpalette{#1}
+    \node[anchor=west,font=\ttfamily\small,text=hwtext] at (-0.2,0) {#1};
+    \foreach \r [count=\i] in {io,comp,quant,const,op,mem,ctrl,group}{%
+      \node[draw=hw\r D,fill=hw\r B,minimum width=0.95cm,minimum height=0.5cm,
+            font=\tiny,text=hw\r T] at ({1.6+\i*1.05},0) {\r};}
+    \draw[hwwire,line width=1pt] (11.3,0.12) -- ++(0.9,0);
+    \draw[hwcwire,line width=1pt,dashed] (11.3,0) -- ++(0.9,0);
+    \draw[hwaccent,line width=1.4pt] (11.3,-0.12) -- ++(0.9,0);
+  \end{tikzpicture}\par}
+
+\input{../examples/catalogue.inc}
+
+\title{\textbf{hwfig}\\[2pt]\large TikZ styles for hardware and dataflow figures}
+\author{Pelayo Leguina\\\small\url{https://github.com/pleguina/hwfig}}
+\date{Version 1.2, 15 November 2026}
+
+\begin{document}
+\maketitle
+
+\begin{center}
+\includegraphics[width=\linewidth]{../examples/l1_trigger.pdf}
+\end{center}
+
+\tableofcontents
+
+\section{What it is for}
+
+Block diagrams of FPGA firmware, HLS kernels and trigger systems tend to be
+drawn from scratch for every paper, and they rarely look alike. hwfig gives
+you a fixed set of TikZ styles for the things that appear in these figures
+again and again: compute kernels, quantisers, compile-time constants,
+memories, FIFOs, processors, AI~Engine tiles, routers, clock domains and so
+on.
+
+Every style takes its colours from a \emph{role} (input/output, compute,
+quantisation, constant, operator, memory, control, frame) instead of from a
+fixed colour. That makes three things easy:
+
+\begin{itemize}
+  \item switching a whole paper between print-friendly greyscale and a
+        colour-blind-safe palette with one line;
+  \item changing the overall look (rounded or square boxes, solid or tinted
+        fills, serif or sans) without touching the figures;
+  \item keeping every figure in a document consistent, because nobody picks
+        colours by hand.
+\end{itemize}
+
+hwfig only needs TikZ and xcolor. It works with pdfLaTeX, XeLaTeX and LuaLaTeX.
+
+\section{Installation}
+
+If hwfig is in your TeX distribution, there is nothing to do. Otherwise copy
+\code{hwfig.sty} next to your document (on Overleaf, upload it to the
+project), or put it in your personal tree so every document finds it:
+
+\begin{lstlisting}
+mkdir -p "$(kpsewhich -var-value TEXMFHOME)/tex/latex/hwfig"
+cp hwfig.sty "$(kpsewhich -var-value TEXMFHOME)/tex/latex/hwfig/"
+\end{lstlisting}
+
+hwfig adds one pgf layer, \code{hwcanvas}, below the usual
+\code{background} layer. If your document calls \cs{pgfsetlayers} itself,
+keep \code{hwcanvas,background,main} in the list.
+
+\section{A first figure}
+
+Load the package and start each picture with the \code{hw} style. It sets
+the font size, the line width and the arrow tips.
+
+\begin{lstlisting}
+\usepackage{hwfig}            % greyscale, classic look
+\end{lstlisting}
+
+\snippet{first}
+
+Run-time data uses \code{runtime}, values fixed at compile time (weights,
+scale factors, configuration) use the dashed \code{ctime}, and the thick
+\code{hot} wire marks the path you want the reader to follow.
+
+\section{Palettes}
+
+Choose a palette as a package option, \code{\usepackage[okabe]{hwfig}}, or
+switch anywhere with \cs{hwpalette}\code{{okabe}}. The switch is local to
+the current group, so one figure can use a different palette from the rest
+of the document.
+
+\medskip
+\palstrip{grey}\palstrip{okabe}\palstrip{tol}\palstrip{bright}
+\palstrip{ibm}\palstrip{nord}\palstrip{slate}\palstrip{cern}
+\palstrip{ngt}\palstrip{ngtblue}\palstrip{ngtdark}\palstrip{ngtnight}
+\medskip
+
+\begin{description}
+  \item[\code{grey}] The default. Safe for print and photocopies.
+  \item[\code{okabe}, \code{tol}, \code{bright}, \code{ibm}] Colour-blind-safe
+    palettes (Okabe--Ito, Paul Tol's muted and bright sets, IBM's design
+    palette). \code{okabe} has the strongest contrast and is a good default
+    for colour papers.
+  \item[\code{nord}, \code{slate}] Softer tones that suit slides.
+  \item[\code{cern}] CERN blue with an orange accent.
+  \item[\code{ngt}, \code{ngtblue}] The colours of CERN's Next Generation
+    Triggers project: the five logo colours, and the navy, teal and amber of
+    its title slides.
+  \item[\code{ngtdark}, \code{ngtnight}] The same two palettes on a dark
+    background. Add \code{hwcanvas} to the picture options,
+    \code{\begin{tikzpicture}[hw,hwcanvas]}, so the background is painted.
+\end{description}
+
+The three lines at the end of each strip are the normal wire, the constant
+wire and the accent used by \code{hot}. A misspelt palette name stops the
+compilation with an error rather than silently falling back.
+
+\subsection{Your own palette}
+
+A palette sets a draw colour and a light fill for each of the eight roles,
+plus the three wire colours. Keep the fills light (at most about 25\,\%) so
+black text stays readable.
+
+\snippet{palette}
+
+A dark palette also calls \cs{hwink}\code{{<text>}{<paper>}} to set the text
+and background colours, and mixes its fills into the background colour
+rather than into white.
+
+\section{The look: shapes, fills, fonts and lines}
+
+The look is independent of the palette and, like it, local to the current
+group. \cs{hwsetup} sets several things at once, and the same keys work as
+package options:
+
+\begin{lstlisting}
+\usepackage[ngt,shape=round,font=sans]{hwfig}
+\hwsetup{palette=ngtdark,shape=pill,fill=solid,line=bold,shadow}
+\end{lstlisting}
+
+\begin{center}
+\begin{tabular}{>{\ttfamily}l p{0.62\linewidth}}
+\toprule
+\normalfont command & values \\
+\midrule
+\textbackslash hwshape & \code{classic} (default: square kernels, rounded
+  ports), \code{soft}, \code{round}, \code{pill} (pill-shaped ports),
+  \code{sharp} \\
+\textbackslash hwfill  & \code{tint} (default), \code{solid} (saturated boxes
+  with light text), \code{outline} \\
+\textbackslash hwfont  & \code{serif}, \code{sans}, \code{mono}, or any font
+  commands \\
+\textbackslash hwline  & \code{thin}, \code{normal}, \code{bold}, or a length \\
+\textbackslash hwshadow & a soft drop shadow under boxes; \cs{hwshadow}\code{[false]}
+  turns it off \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\newcommand\looksample[1]{%
+  \begin{tikzpicture}[hw]\hwsetup{#1}
+    \node[anchor=west,font=\ttfamily\scriptsize,text=black!70] at (-0.7,0.75) {\detokenize{#1}};
+    \node[runtime] (x) at (0,0) {$x$};
+    \node[hlsbox,minimum width=1.5cm] (k) at (2,0) {MAC};
+    \node[qbox] (q) at (4.1,0) {sat8};
+    \node[mem,minimum width=1.3cm] (m) at (6.2,0) {buffer};
+    \node[ctrl,minimum width=1.2cm] (f) at (8.2,0) {FSM};
+    \draw[arr] (x)--(k); \draw[hot] (k)--(q); \draw[arr] (q)--(m); \draw[ctlarr] (f)--(m);
+  \end{tikzpicture}\par\smallskip}
+\begin{center}\hwpalette{okabe}
+\looksample{shape=classic}
+\looksample{shape=round}
+\looksample{shape=pill,font=sans}
+\looksample{shape=round,fill=solid}
+\looksample{shape=sharp,fill=outline,line=bold}
+\end{center}
+
+Use \code{solid} with a colour palette; with \code{grey} it gives black
+boxes. For sans-serif maths as well as text, load the \code{sansmath}
+package and use \cs{hwfont}\code{{\sffamily\sansmath}}.
+
+\clearpage
+\section{Node and wire styles}
+
+\subsection{Nodes}
+
+\begin{center}
+\small
+\begin{tabular}{>{\ttfamily}l p{0.6\linewidth}}
+\toprule
+\normalfont style & use \\
+\midrule
+runtime, ctime & run-time inputs and outputs; compile-time constants \\
+hlsbox, qbox, op & compute kernel; quantiser or requantiser; arithmetic operator \\
+mux, demux & multiplexer and demultiplexer \\
+mem, bram, uram, fifo & on-chip memory and streams \\
+reg, ff & register with clock wedge \\
+lut, dsp & FPGA primitives \\
+extmem, cpu, host & DDR or HBM; processor; host computer \\
+xbar, router, pe, aie & interconnect, NoC router, processing element, AI Engine tile \\
+chip, port, cdc & package with pins, pin marker, clock-domain crossing \\
+term, decision & flow-chart end point and branch \\
+state, accstate & FSM state and accepting state \\
+buf, net, neuron & driver or buffer, network cloud, neural-network unit \\
+stack & add to any box to show several copies of it \\
+dot, badge, note & wire junction, numbered call-out, free annotation \\
+group, clkdomain & background frames (use with \code{fit}) \\
+plregion, psregion & frames for the programmable logic and processor sides \\
+grouplabel, lbl, lblbox & frame titles and wire labels \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Wires}
+
+\code{arr} is the normal data wire and \code{darr} the dashed wire from a
+constant. \code{hot} highlights a path, \code{bus} is a wide datapath (add
+\code{pic[pos=.5]{buswidth=64}} for the width), \code{biarr} goes both ways,
+\code{ctlarr} carries control or handshakes, and \code{link} is a serial or
+optical link. \code{brace} and \code{brace'} draw a dimension brace along a
+segment.
+
+The catalogue below shows every style in the \code{grey} and \code{ngt}
+palettes.
+
+\begin{center}
+\def\pal{grey}\hwpalette{grey}\resizebox{\linewidth}{!}{\catalogue}
+\end{center}
+\begin{center}
+\def\pal{ngt}\hwpalette{ngt}\resizebox{\linewidth}{!}{\catalogue}
+\end{center}
+
+\section{Parametric pictures}
+
+Some structures are drawn by a single \cs{pic}. Options go in the pic call
+and only affect that pic; \cs{hwset}\code{{...}} changes the defaults for
+the rest of the current scope instead. The parts inside a pic get names
+starting with the pic's own name, so you can connect wires to them.
+
+\begin{center}
+\small
+\begin{tabular}{>{\ttfamily}l p{0.3\linewidth} p{0.36\linewidth}}
+\toprule
+\normalfont pic & options & named parts \\
+\midrule
+aiearray & rows, cols, dx, dy, tilelabel & tiles \code{n-t<r>-<c>}, shims \code{n-s<c>}, frame \code{n-box} \\
+systolic & rows, cols & \code{n-pe<r>-<c>} \\
+addertree & depth & inputs \code{n-in<k>}, adders \code{n-a<l>-<k>}, \code{n-out} \\
+pipeline & labels & stages \code{n-st<k>}, registers \code{n-r<k>} \\
+noc & rows, cols, nocpe & routers \code{n-n<r>-<c>}, PEs \code{n-pe<r>-<c>} \\
+fabric & columns, fabricrows & column tops \code{n-c<k>} \\
+mlp & layers, lsep, nsep & units \code{n-l<layer>-<k>} \\
+legend & legend & --- \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\snippet{pics}
+
+\section{Checking a layout}
+
+While you draft, load the package with the \code{check} option, or put
+\cs{hwsetup}\code{{check}} at the start of one picture. hwfig then looks for
+the mistakes that are easy to miss on screen:
+
+\begin{itemize}
+  \item two boxes that overlap;
+  \item a wire label that sits on a box;
+  \item a wire that runs through a box;
+  \item a wire too short for its arrow head, or one that turns right at the
+        arrow head.
+\end{itemize}
+
+Each problem gets a warning in the log and a red mark in the PDF, and every
+picture ends with a line such as \code{hwfig check: 0 problem(s)}. Add
+\code{nocheck} to a node that overlaps another on purpose, and remove the
+option for the final version. Here the check finds an overlap, a wire
+through two boxes and an arrow that is too short:
+
+\snippet{check}
+
+The check cannot judge everything: wires crossing each other, labels on
+frame borders and general crowding still need a look at the result.
+
+\section{Drawing conventions}
+
+These are the conventions the examples follow. They are not enforced, but
+they keep figures readable.
+
+\begin{itemize}
+  \item Data flows from left to right. Keep the main path on one row and
+        put parallel branches above and below it.
+  \item Place compile-time constants directly above or below the block they
+        configure, joined with \code{darr}.
+  \item Follow every block that changes precision with a \code{qbox}.
+  \item Place nodes at explicit coordinates on a grid (about 2.4\,cm between
+        columns); this is easier to keep tidy than relative positioning.
+  \item Route wires with straight and right-angled segments, never through
+        boxes, and leave at least 0.4\,cm before each arrow head.
+  \item Put labels only on stretches of wire with free space around them.
+  \item Leave at least 0.6\,cm between neighbouring frames, and keep figures
+        within about 16\,cm for a two-column paper.
+\end{itemize}
+
+\section{Examples}
+
+The \code{examples} folder has complete documents: a quantised GNN layer, a
+Versal SoC, the Level-1 trigger on the first page, a track-finder FPGA, an
+NGT-style trigger chain, and the catalogues of styles, palettes and looks.
+
+\section{License and history}
+
+hwfig is distributed under the \LaTeX\ Project Public License, version 1.3c
+or later. The example documents may also be used under CC~BY-SA~4.0.
+Changes between versions are listed in \code{CHANGELOG.md}, and bug reports
+and suggestions are welcome on GitHub.
+
+\end{document}

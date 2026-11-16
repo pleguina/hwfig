@@ -12,6 +12,12 @@ colour-blind-safe palettes with one line.
 |---|---|
 | ![](gallery/gnn_layer-1.png) | ![](gallery/gnn_layer-2.png) |
 
+The [manual](doc/hwfig-doc.pdf) covers everything below in more detail.
+
+| Level-1 trigger overview (`ngtblue`) | Track-finder FPGA (`ngt`) |
+|---|---|
+| ![](gallery/l1_trigger-1.png) | ![](gallery/track_finder-1.png) |
+
 ## Install
 
 Copy `hwfig.sty` next to your `.tex` file (Overleaf: upload it to the
@@ -205,6 +211,13 @@ PDF — when two boxes overlap, a wire label sits on a box, a wire runs
 through a box, or a wire is too short (or bends too late) for its arrow tip.
 Each picture ends with `hwfig check: N problem(s)`. Add `nocheck` to a node
 that overlaps on purpose. Remove the option for the final build.
+
+## Publishing
+
+`./release.sh` builds `dist/hwfig.zip`, ready to upload to CTAN, and one
+self-contained bundle per showcase figure in `dist/tikznet/` (the `.tex`,
+`hwfig.sty`, the PDF and a PNG preview) for galleries such as TikZ.net. Run
+`./build.sh` first.
 
 ## Examples and tests
 

@@ -1,0 +1,42 @@
+% Inside a generic muon track-finder processor FPGA: optical inputs,
+% unpacking and alignment, a stub buffer, replicated pattern or GNN
+% inference engines, ghost-busting and sorting, and the output links.
+% Illustrative only; it does not describe a specific firmware.
+\documentclass[tikz,border=8pt]{standalone}
+\usepackage[ngt,shape=round]{hwfig}
+\begin{document}
+\begin{tikzpicture}[hw]
+  \node[term] (in) at (-2.1,0) {Muon\\TPGs};
+
+  \node[hlsbox,stack,minimum width=1.5cm] (rx) at (0,0) {Link RX};
+  \node[hlsbox] (unp) at (2.4,0) {Unpack\\+ align};
+  \node[bram,minimum width=1.5cm] (buf) at (4.75,0) {Stub buffer};
+  \node[hlsbox,stack] (inf) at (7.2,0) {Pattern / GNN\\inference};
+  \node[qbox,minimum width=1.6cm] (gb) at (9.75,0) {Ghost-busting\\+ sort};
+  \node[hlsbox,minimum width=1.4cm] (tx) at (12.05,0) {Link TX};
+
+  \node[ctime] (wts) at (7.2,1.45) {patterns / weights};
+  \node[ctrl] (ctl) at (4.75,-1.7) {Control (IPbus)};
+
+  \draw[link] (in) -- (rx);
+  \draw[bus] (rx) -- (unp);
+  \draw[arr] (unp) -- (buf);
+  \draw[hot] (buf) -- (inf);
+  \draw[hot] (inf) -- (gb);
+  \draw[arr] (gb) -- (tx);
+  \draw[link] (tx.east) -- ++(1.7,0) node[lbl,above=3pt,pos=0.75]{to GMT};
+
+  \draw[darr] (wts) -- (inf);
+  \draw[ctlarr] (ctl) -- (buf);
+  \draw[ctlarr] (ctl.east) -| (inf.south);
+  \draw[ctlarr] (ctl.west) -| (unp.south);
+
+  \node[note,anchor=north west] at ($(inf.south east)+(0.15,-0.25)$) {one engine\\per sector};
+
+  \begin{scope}[on background layer]
+    \coordinate (tl) at (-0.95,2.2); \coordinate (br) at (12.95,-2.35);
+    \node[clkdomain,fit=(tl)(br),inner sep=0pt,
+          label={[grouplabel,text=hwaccent,anchor=south west]north west:Track-finder FPGA}] {};
+  \end{scope}
+\end{tikzpicture}
+\end{document}

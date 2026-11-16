@@ -31,6 +31,10 @@ for f in examples/*.tex; do
 done
 for t in stress api themes check; do build tests "$t"; done
 
+# the manual (twice, for the table of contents)
+for i in 1 2; do (cd doc && latex hwfig-doc.tex >/dev/null) || { echo "FAIL  doc/hwfig-doc.tex (see doc/hwfig-doc.log)"; exit 1; }; done
+echo "ok    doc/hwfig-doc.tex"
+
 # layout check: the broken picture must raise every kind of warning, the clean one none
 for m in "overlap on" "wire label near" "runs through" "shorter than its arrow tip" "bends inside its arrow tip" "check: 0 problem"; do
   tr -d '\n' < tests/check.log | grep -q "$m" || { echo "FAIL  tests/check.tex: missing '$m'"; exit 1; }
@@ -57,4 +61,4 @@ for k in shape fill; do
   grep -q "Package hwfig Error: Unknown $k" "tests/unknown_$k.log" && echo "ok    tests/unknown_$k.tex (errors as expected)"
 done
 
-rm -f examples/*.aux examples/*.log tests/*.aux tests/*.log tests/*.out
+rm -f examples/*.aux examples/*.log tests/*.aux tests/*.log tests/*.out doc/*.aux doc/*.log doc/*.out doc/*.toc

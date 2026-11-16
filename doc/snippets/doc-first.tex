@@ -1,0 +1,11 @@
+\begin{tikzpicture}[hw]
+  \node[runtime] (x) at (0,0)   {$x$};
+  \node[hlsbox]  (k) at (2.3,0) {MAC};
+  \node[qbox]    (q) at (4.6,0) {shift + sat8};
+  \node[runtime] (y) at (6.7,0) {$y$};
+  \node[ctime]   (w) at (2.3,1.1) {$W$};
+  \draw[arr]  (x) -- (k);
+  \draw[hot]  (k) -- (q);
+  \draw[arr]  (q) -- (y);
+  \draw[darr] (w) -- (k);
+\end{tikzpicture}
