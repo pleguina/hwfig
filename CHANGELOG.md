@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- User manual, `doc/hwfig-doc.pdf`, built from `doc/hwfig-doc.tex`.
+- Examples: `l1_trigger` (overview of a CMS-style Level-1 trigger) and
+  `track_finder` (inside a muon track-finder FPGA).
+- `release.sh`: builds the CTAN upload and self-contained example bundles.
+
+### Fixed
+- `\hwsetup{check}` inside a picture no longer stops with an undefined
+  control sequence.
+
 ## v1.2 — 2026-11-15
 
 Existing figures render unchanged (same defaults); everything below is opt-in.

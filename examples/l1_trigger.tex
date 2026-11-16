@@ -1,0 +1,66 @@
+% Overview of a CMS-style Level-1 trigger for the HL-LHC: detector data at
+% 40 MHz, trigger primitives, track finders, correlator and global trigger.
+% The muon path through the overlap track finder (OMTF) is highlighted.
+\documentclass[tikz,border=8pt]{standalone}
+\usepackage[ngtblue,shape=round]{hwfig}
+\begin{document}
+\begin{tikzpicture}[hw]
+  % detectors
+  \node[term,minimum width=1.6cm] (trk) at (0,3)    {Tracker};
+  \node[term,minimum width=1.6cm] (cal) at (0,1.2)  {Calorimeters};
+  \node[term,minimum width=1.6cm] (muo) at (0,-1.2) {Muon\\chambers};
+
+  % trigger primitives
+  \node[hlsbox] (ltf)  at (2.9,3)    {L1 track\\finder};
+  \node[hlsbox] (ctpg) at (2.9,1.2)  {Calorimeter\\TPG};
+  \node[hlsbox] (mtpg) at (2.9,-1.2) {Muon\\TPG};
+
+  % muon track finders
+  \node[hlsbox,minimum width=1.6cm] (bmtf) at (5.9,-0.2) {BMTF\\[-2pt]{\tiny barrel}};
+  \node[hlsbox,minimum width=1.6cm] (omtf) at (5.9,-1.2) {OMTF\\[-2pt]{\tiny overlap}};
+  \node[hlsbox,minimum width=1.6cm] (emtf) at (5.9,-2.2) {EMTF\\[-2pt]{\tiny endcap}};
+
+  % global object builders
+  \node[qbox,minimum width=1.6cm] (gtt) at (8.6,3)    {Global track\\trigger};
+  \node[qbox,minimum width=1.6cm] (gct) at (8.6,1.2)  {Global calo\\trigger};
+  \node[qbox,minimum width=1.6cm] (gmt) at (8.6,-1.2) {Global muon\\trigger};
+
+  % correlator and decision
+  \node[mem,minimum width=1.8cm] (cor) at (11.3,1.2) {Correlator\\PF + PUPPI};
+  \node[ctrl,minimum width=1.6cm] (gt)  at (13.8,1.2) {Global\\trigger};
+  \node[term] (daq) at (13.8,-1.2) {DAQ / HLT};
+
+  % links from the detectors
+  \draw[link] (trk) -- (ltf) node[lbl,midway,above=3pt]{40 MHz};
+  \draw[link] (cal) -- (ctpg);
+  \draw[link] (muo) -- (mtpg);
+
+  % tracker and calorimeter paths
+  \draw[arr] (ltf) -- (gtt);
+  \draw[arr] (ctpg) -- (gct);
+
+  % muon fan-out to the three track finders
+  \draw (mtpg.east) -- (4.15,-1.2) node[dot] (fork) {};
+  \draw[arr] (fork) |- (bmtf.west);
+  \draw[hot] (fork) -- (omtf.west);
+  \draw[arr] (fork) |- (emtf.west);
+  \draw[arr] (bmtf.east) -| (gmt.north);
+  \draw[hot] (omtf.east) -- (gmt.west);
+  \draw[arr] (emtf.east) -| (gmt.south);
+
+  % into the correlator and the decision
+  \draw[arr] (gtt.east) -| (cor.north);
+  \draw[arr] (gct) -- (cor);
+  \draw[hot] (gmt.east) -| (cor.south);
+  \draw[hot] (cor) -- (gt);
+  \draw[hot] (gt) -- (daq) node[lbl,midway,right]{L1 accept, 750 kHz};
+
+  % latency budget
+  \draw[brace] (1.85,3.6) -- (14.65,3.6) node[lbl,midway,above=6pt]{fixed latency, 12.5\,$\mu$s};
+
+  \begin{scope}[on background layer]
+    \node[group,fit=(mtpg)(bmtf)(emtf)(gmt),inner sep=6pt,
+          label={[grouplabel,anchor=north west]south west:Muon trigger}] {};
+  \end{scope}
+\end{tikzpicture}
+\end{document}
